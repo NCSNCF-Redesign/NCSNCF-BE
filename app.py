@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 import os
 from flask_cors import CORS
 from flask_restful import Api, Resource
+from events import get_all_events  # Import your function/data from events.py
 
 app = Flask(__name__)
 
@@ -12,7 +13,7 @@ CORS(
     supports_credentials=True,
     origins=[
         "https://ccae-redesign-team.github.io",  # deployed CCAE-FE
-        "http://localhost:4000",                 # local frontend (adjust to your port)
+        "http://localhost:4000",                 # local frontend (adjust to port)
         "http://localhost:4500",
     ],
 )
@@ -88,3 +89,11 @@ def say_hello():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
+
+@app.route('/api/events', methods=['GET'])
+def get_events():
+    """Returns the master list of CCAE events."""
+    return jsonify(EVENTS_DATABASE), 200
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
