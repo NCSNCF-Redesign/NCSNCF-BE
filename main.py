@@ -34,6 +34,7 @@ from api.congrats_api import congrats_api  # Import the congrats API
 from api.profile_game import profile_game_api  # CS Pathway Game profile persistence
 from api.snapshot_proxy import snapshot_proxy
 #from api.announcement import announcement_api ##temporary revert
+from api.calendar import calendar_api
 
 # database Initialization functions
 from model.user import User, initUsers
@@ -95,6 +96,7 @@ app.register_blueprint(congrats_api)  # Register the congrats message API
 app.register_blueprint(profile_game_api)  # CS Pathway Game profile persistence
 app.register_blueprint(snapshot_proxy)  # Register the snapshot proxy API
 # app.register_blueprint(announcement_api) ##temporary revert
+app.register_blueprint(calendar_api)
 
 # Jokes file initialization
 with app.app_context():
