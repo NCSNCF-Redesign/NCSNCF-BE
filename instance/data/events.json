@@ -1,0 +1,26 @@
+[
+  {
+    "id": "evt_101",
+    "title": "Beginner Pottery Workshop",
+    "category": "Arts",
+    "price": 45,
+    "capacity": 15,
+    "date": "2026-10-20"
+  },
+  {
+    "id": "evt_102",
+    "title": "Jazz Night & Jam Session",
+    "category": "Music",
+    "price": 20,
+    "capacity": 0,
+    "date": "2026-11-05"
+  },
+  {
+    "id": "evt_103",
+    "title": "Watercolor Painting",
+    "category": "Arts",
+    "price": 30,
+    "capacity": 8,
+    "date": "2026-11-12"
+  }
+]

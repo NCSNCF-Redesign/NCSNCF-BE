@@ -1,22 +1,14 @@
 # Refactored: Use CRUD naming (read, create) in InfoModel
-from flask import Flask, jsonify, request
+from flask import Flask, request
 import os
 from flask_cors import CORS
 from flask_restful import Api, Resource
-from events import get_all_events  # Import your function/data from events.py
+from api.events import load_events, filter_events_by_criteria  
 
 app = Flask(__name__)
 
-# Only allow the CCAE frontend (deployed and local dev)
-CORS(
-    app,
-    supports_credentials=True,
-    origins=[
-        "https://ccae-redesign-team.github.io",  # deployed CCAE-FE
-        "http://localhost:4000",                 # local frontend (adjust to port)
-        "http://localhost:4500",
-    ],
-)
+# Allow cross-origin requests for local testing and deployed frontend
+CORS(app, supports_credentials=True)
 
 api = Api(app)
 
@@ -57,7 +49,7 @@ info_model = InfoModel()
 # --- API Resource ---
 class DataAPI(Resource):
     def get(self):
-        return jsonify(info_model.read())
+        return info_model.read(), 200
 
     def post(self):
         # Add a new entry to InfoDb
@@ -71,7 +63,6 @@ class DataAPI(Resource):
 api.add_resource(DataAPI, "/api/data")
 
 
-# We can use @app.route for HTML endpoints, this will be style for Admin UI
 @app.route("/")
 def say_hello():
     html_content = """
@@ -86,14 +77,25 @@ def say_hello():
     """
     return html_content
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5001)))
-
 @app.route('/api/events', methods=['GET'])
 def get_events():
-    """Returns the master list of CCAE events."""
-    return jsonify(EVENTS_DATABASE), 200
+    events = load_events()
+    # Return Python list directly (Flask handles conversion without jsonify conflict)
+    return events, 200
+
+@app.route('/api/events/filter', methods=['GET'])
+def get_filtered_events():
+    category_query = request.args.get('category', 'All')
+    min_capacity_query = int(request.args.get('min_capacity', 0))
+
+    master_event_list = load_events()
+    matching_events = filter_events_by_criteria(master_event_list, category_query, min_capacity_query)
+
+    return {
+        "status": "success",
+        "total_matches": len(matching_events),
+        "data": matching_events
+    }, 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
