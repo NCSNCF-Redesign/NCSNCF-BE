@@ -471,154 +471,96 @@ class UserAPI:
                 return {'message': f'1 or more sections failed to delete, current {sections} requested {current_user.read_sections()}'}, 404
     
             return {'message': f'Sections {sections} deleted successfully'}, 200
-    class _Security(Resource):
-        def post(self):
-            try:
-                body = request.get_json()
-                if not body:
-                    return {
-                        "message": "Please provide user details",
-                        "data": None,
-                        "error": "Bad request"
-                    }, 400
-                ''' Get Data '''
-                uid = body.get('uid')
-                if uid is None:
-                    return {'message': f'User ID is missing'}, 401
-                password = body.get('password')
-                if not password:
-                    return {'message': f'Password is missing'}, 401
-                            
-                ''' Find user '''
-    
-                user = User.query.filter_by(_uid=uid).first()
-                
-                if user is None or not user.is_password(password):
+class _Security(Resource):
+    def post(self):
+        try:
+            body = request.get_json()
+            if not body:
+                return {
+                    "message": "Please provide user details",
+                    "data": None,
+                    "error": "Bad request"
+                }, 400
+            
+            uid = body.get('uid')
+            if uid is None:
+                return {'message': 'User ID is missing'}, 401
+            
+            password = body.get('password')
+            if not password:
+                return {'message': 'Password is missing'}, 401
+             
+            user = User.query.filter_by(_uid=uid).first()
+            if user is None or not user.is_password(password):
+                return {'message': 'Invalid user id or password'}, 401
+            
+            if user:
+                try:
+                    token = jwt.encode(
+                        {
+                            "_uid": user._uid,
+                            "token_version": user.token_version,
+                            "exp": datetime.utcnow() + timedelta(seconds=current_app.config["JWT_TOKEN_MAX_AGE"]),
+                        },
+                        current_app.config["SECRET_KEY"],
+                        algorithm="HS256"
+                    )
                     
-                    return {'message': f"Invalid user id or password"}, 401
-                            
-                # Check if user is found
-                if user:
-                    try:
-                        # exp ties the token's server-enforced lifetime to the cookie's
-                        # client-side max_age (previously the token never expired by JWT
-                        # semantics at all). token_version is checked on every request in
-                        # auth_required -- see model/user.py's token_version column comment.
-                        token = jwt.encode(
-                            {
-                                "_uid": user._uid,
-                                "token_version": user.token_version,
-                                "exp": datetime.utcnow() + timedelta(seconds=current_app.config["JWT_TOKEN_MAX_AGE"]),
-                            },
-                            current_app.config["SECRET_KEY"],
-                            algorithm="HS256"
-                        )
-                        # Return JSON response with cookie
-                        is_production = os.environ.get('IS_PRODUCTION', 'false').lower() == 'true'
-                        
-                        state = user.verification_state
-                        # Create JSON response
-                        response_data = {
-                            "message": f"Authentication for {user._uid} successful",
-                            "user": {
-                                "uid": user._uid,
-                                "name": user.name,
-                                "role": user.role,
-                                "class": user._class if getattr(user, '_class', None) is not None else [],
-                                "active": user.active,
-                                "verification_state": state,
-                                "verification_required": state == "active_verification_required",
-                                "verified_by_google": bool(account_types.google_domains(user.role))
-                            }
+                    is_production = os.environ.get('IS_PRODUCTION', 'false').lower() == 'true'
+                    state = user.verification_state
+                    
+                    response_data = {
+                        "message": f"Authentication for {user._uid} successful",
+                        "user": {
+                            "uid": user._uid,
+                            "name": user.name,
+                            "role": user.role,
+                            "class": user._class if getattr(user, '_class', None) is not None else [],
+                            "active": user.active,
+                            "verification_state": state,
+                            "verification_required": state == "active_verification_required",
+                            "verified_by_google": bool(account_types.google_domains(user.role))
                         }
-                        resp = jsonify(response_data)
-                        
-                        # Set cookie
-                        if is_production:
-                            resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
-                                token,
-                                max_age=current_app.config["JWT_TOKEN_MAX_AGE"],
-                                secure=True,
-                                httponly=True,
-                                path='/',
-                                samesite='None',
-                                domain='.opencodingsociety.com'
-                            )
-                        else:
-                            resp.set_cookie(
-                                current_app.config["JWT_TOKEN_NAME"],
-                                token,
-                                max_age=current_app.config["JWT_TOKEN_MAX_AGE"],
-                                secure=False,
-                                httponly=False,  # Set to True for more security if JS access not needed
-                                path='/',
-                                samesite='Lax'
-                            )
-                        print(f"Token set: {token}")
-                        return resp 
-                    except Exception as e:
-                        return {
-                                        "error": "Something went wrong",
-                                        "message": str(e)
-                                    }, 500
-                return {
-                                "message": "Error fetching auth token!",
-                                "data": None,
-                                "error": "Unauthorized"
-                            }, 404
-            except Exception as e:
-                 return {
-                                "message": "Something went wrong!",
-                                "error": str(e),
-                                "data": None
-                            }, 500
-                 
-        @token_required()
-        def delete(self):
-            ''' Invalidate the current user's token by setting its expiry to 0 '''
-            current_user = g.current_user
-            try:
-                # Generate a token with practically 0 age
-                token = jwt.encode(
-                    {"_uid": current_user._uid, 
-                     "exp": datetime.utcnow()},
-                    current_app.config["SECRET_KEY"],
-                    algorithm="HS256"
-                )
-                # You might want to log this action or take additional steps here
-                
-                # Prepare a response indicating the token has been invalidated
-                resp = Response("Token invalidated successfully")
-                is_production = os.environ.get('IS_PRODUCTION', 'false').lower() == 'true'
-                if is_production:
-                    resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
-                        token,
-                        max_age=0,  # Immediately expire the cookie
-                        secure=True,
-                        httponly=True,
-                        path='/',
-                        samesite='None',
-                        domain='.opencodingsociety.com'
-                
-                    )
-                else:
-                    resp.set_cookie(
-                        current_app.config["JWT_TOKEN_NAME"],
-                        token,
-                        max_age=0,  # Immediately expire the cookie
-                        secure=False,
-                        httponly=False,  # Set to True for more security if JS access not needed
-                        path='/',
-                        samesite='Lax'
-                    )
-                return resp
-            except Exception as e:
-                return {
-                    "message": "Failed to invalidate token",
-                    "error": str(e)
-                }, 500
+                    }
+                    
+                    resp = jsonify(response_data)
+                    
+                    if is_production:
+                        resp.set_cookie(
+                            current_app.config["JWT_TOKEN_NAME"],
+                            token,
+                            max_age=current_app.config["JWT_TOKEN_MAX_AGE"],
+                            secure=True,
+                            httponly=True,
+                            path='/',
+                            samesite='None',
+                            domain='.opencodingsociety.com'
+                        )
+                    else:
+                        resp.set_cookie(
+                            current_app.config["JWT_TOKEN_NAME"],
+                            token,
+                            max_age=current_app.config["JWT_TOKEN_MAX_AGE"],
+                            secure=False,
+                            httponly=True, # Changed to True for maximum security in development
+                            path='/',
+                            samesite='Lax'
+                        )
+                    
+                    return resp
+                    
+                except Exception as e:
+                    return {
+                        "error": "Something went wrong",
+                        "message": str(e)
+                    }, 500
+                    
+        except Exception as e:
+            return {
+                "message": "Something went wrong!",
+                "error": str(e),
+                "data": None
+            }, 500
 
     class _GradeData(Resource):
         """
