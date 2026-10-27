@@ -64,8 +64,6 @@ import os
 # Load environment variables
 load_dotenv()
 
-
-
 # register URIs for api endpoints
 app.register_blueprint(python_exec_api)
 app.register_blueprint(javascript_exec_api)

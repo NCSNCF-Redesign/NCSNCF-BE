@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+import jwt
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import current_user
 from model.survey import CCAESurvey, db
 from model.user import User
@@ -9,10 +10,34 @@ survey_api = Blueprint('survey_api', __name__, url_prefix='/api/profile')
 def save_ccae_survey():
     data = request.get_json()
     if not data:
-        return jsonify({"message": "No input data provided"}), 400
+        return jsonify({"message": "No JSON payload provided"}), 400
 
-    # Determine user ID if logged in via session/token
-    user_id = current_user.id if current_user and current_user.is_authenticated else None
+    user_id = None
+
+    # Method A: Check Flask-Login Session Cookie
+    if current_user and current_user.is_authenticated:
+        user_id = current_user.id
+
+    # Method B: Fallback to reading JWT Bearer Token from Authorization Header
+    auth_header = request.headers.get('Authorization')
+    if not user_id and auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        try:
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            token_uid = payload.get('_uid') or payload.get('uid') or payload.get('get_id')
+            token_id = payload.get('id')
+
+            user = None
+            if token_id:
+                user = User.query.get(token_id)
+            elif token_uid:
+                user = User.query.filter_by(_uid=str(token_uid)).first()
+
+            if user:
+                user_id = user.id
+                print(f"[SURVEY AUTH] Successfully authenticated user: {user.uid} (ID: {user.id}) via JWT")
+        except Exception as e:
+            print(f"[SURVEY AUTH ERROR] JWT decode failed: {e}")
 
     try:
         survey = CCAESurvey(
@@ -32,10 +57,16 @@ def save_ccae_survey():
             browsing_preference=data.get('browsing_preference'),
             accessibility_importance=data.get('accessibility_importance')
         )
-        survey.create()
-        return jsonify({"message": "Survey submitted successfully", "survey": survey.read()}), 201
+        
+        db.session.add(survey)
+        db.session.commit()
+
+        print(f"[SURVEY RECORD] Survey saved with user_id={user_id}")
+        return jsonify({"message": "Survey submitted successfully", "user_id": user_id, "survey": survey.read()}), 201
+
     except Exception as e:
         db.session.rollback()
+        print(f"[SURVEY ERROR] Database save failed: {e}")
         return jsonify({"message": f"Database error: {str(e)}"}), 500
 
 
@@ -57,4 +88,5 @@ def get_ccae_results():
 
         return jsonify({"total_count": len(results), "results": results}), 200
     except Exception as e:
+        print(f"[SURVEY ERROR] Fetch results failed: {e}")
         return jsonify({"message": f"Server error: {str(e)}"}), 500
