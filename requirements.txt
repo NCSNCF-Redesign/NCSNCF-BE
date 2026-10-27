@@ -31,3 +31,4 @@ python-docx
 # onnxruntime
 # opencv-python
 tzdata  # zoneinfo data for the bell schedule on slim images
+Flask-Limiter
