@@ -1,5 +1,5 @@
 # Refactored: Use CRUD naming (read, create) in InfoModel
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
 from flask_cors import CORS
 from flask_restful import Api, Resource
@@ -7,11 +7,20 @@ from api.events import load_events, filter_events_by_criteria
 
 app = Flask(__name__)
 
-# Allow cross-origin requests for local testing and deployed frontend
-CORS(app, supports_credentials=True)
-
 api = Api(app)
 
+# Configures CORS to allow frontend calls
+CORS(
+    app,
+    supports_credentials=True,
+    origins=[
+        "http://localhost:4500",
+        "http://127.0.0.1:4500",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
+        "https://ccae-redesign-team.github.io"
+    ]
+)
 
 # --- Model class for InfoDb with CRUD naming ---
 class InfoModel:
@@ -52,7 +61,6 @@ class DataAPI(Resource):
         return info_model.read(), 200
 
     def post(self):
-        # Add a new entry to InfoDb
         entry = request.get_json()
         if not entry:
             return {"error": "No data provided"}, 400
@@ -80,8 +88,8 @@ def say_hello():
 @app.route('/api/events', methods=['GET'])
 def get_events():
     events = load_events()
-    # Return Python list directly (Flask handles conversion without jsonify conflict)
-    return events, 200
+    # Explicitly jsonify the Python list so Flask returns valid JSON headers
+    return jsonify(events), 200
 
 @app.route('/api/events/filter', methods=['GET'])
 def get_filtered_events():
@@ -91,11 +99,11 @@ def get_filtered_events():
     master_event_list = load_events()
     matching_events = filter_events_by_criteria(master_event_list, category_query, min_capacity_query)
 
-    return {
+    return jsonify({
         "status": "success",
         "total_matches": len(matching_events),
         "data": matching_events
-    }, 200
+    }), 200
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
