@@ -37,6 +37,7 @@ from api.rfid_api import rfid_api
 from api.presence_api import presence_api
 #from api.announcement import announcement_api ##temporary revert
 from api.calendar import calendar_api
+from api.survey import survey_api # Import your survey blueprint
 
 # database Initialization functions
 from model.user import User, initUsers
@@ -87,6 +88,7 @@ app.register_blueprint(feedback_api)
 app.register_blueprint(data_export_import_api)  # Register the data export/import API
 app.register_blueprint(dynamic_api)  # Register the dynamic leaderboard API
 app.register_blueprint(events_api)  # Register the elementary leaderboard API
+app.register_blueprint(survey_api)  # Register the survey API
 app.register_blueprint(joke_api)  # Register the joke API blueprint
 app.register_blueprint(post_api)  # Register the social media post API
 app.register_blueprint(congrats_api)  # Register the congrats message API
@@ -99,6 +101,7 @@ app.register_blueprint(calendar_api)
 
 # Jokes file initialization
 with app.app_context():
+    db.create_all()
     initJokes()
 
 # Tell Flask-Login the view function name of your login route

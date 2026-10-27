@@ -81,6 +81,10 @@
                     {% if is_staff and user.role_editable_by(current_user) %}
                     <button class="btn btn-primary edit-btn" data-uid="{{ user.uid }}" data-role="{{ user.role }}">Edit</button>
                     {% endif %}
+                    
+                    <!-- View Survey Results Button -->
+                    <button class="btn btn-info view-survey-btn" data-uid="{{ user.uid }}">Survey</button>
+
                     {% if is_staff %}
                     {% if user.verification_due %}
                     <button class="btn btn-success status-btn" data-uid="{{ user.uid }}" data-action="verify"{% if user.verification_prompt_days %} data-prompt-days="{{ user.verification_prompt_days }}"{% endif %}>{{ 'Verify' if user.active else 'Activate' }}</button>
@@ -128,12 +132,34 @@
 </div>
 {% endif %}
 
+<!-- Survey Results Modal -->
+<div class="modal fade" id="surveyModal" tabindex="-1" aria-labelledby="surveyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="surveyModalLabel">Survey Results (<span id="surveyModalUid"></span>)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="surveyModalBody">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     $(document).ready(function () {
         // Initialize DataTables
-        const table =  $("#userTable").DataTable(); // repersents table
+        const table =  $("#userTable").DataTable(); // represents table
 
-        table.page.len(-1).draw();  // shows all users and commits
+        table.page.len(-1).draw();  // shows all users
 
         // Filter by active state and role, read from each row's data attributes
         let statusFilter = "all";
@@ -159,64 +185,6 @@
                 table.draw();
             });
         }
-        // Function to fetch commits (DISABLED)
-        /*
-        async function fetchAdminData(userUid) {
-            const commitsElement = $(`#commits-${userUid}`);
-
-            if (!commitsElement.length) return;
-
-            const today = new Date();
-            const startDate = new Date();
-            startDate.setDate(today.getDate() - 30);
-
-            const formattedStartDate = startDate.toISOString().split('T')[0];
-            const formattedEndDate = today.toISOString().split('T')[0];
-
-            try {
-                const response = await fetch(`/api/analytics/commits/${userUid}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ start_date: formattedStartDate, end_date: formattedEndDate })
-                });
-
-                if (!response.ok) throw new Error(`Error: ${response.statusText}`);
-
-                const data = await response.json();
-                commitsElement.text(data.commits?.total_commit_contributions || "0");
-
-            } catch (error) {
-                console.error("Error:", error);
-            }
-        }
-        */
-
-        // Batch processing with delay (DISABLED)
-        /*
-        async function processUsersWithDelay() {
-            const users = $("[id^='commits-']");
-            console.log(`Total users found: ${users.length}`);
-
-            for (let i = 0; i < users.length; i++) {
-                const userUid = users[i].id.split("-")[1];
-
-                await fetchAdminData(userUid);
-
-                if ((i + 1) % 15 === 0) {
-                    console.log(`Pausing for 5 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 4000)); // tinker this however depending on rate limiting
-                } else {
-                    console.log(`Waiting for 2 seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, 100));  // tinker this however depending on rate limiting
-                }
-            }
-
-            table.page.len(10).draw();  
-        }
-        */
-
-        // Start processing users with a delay (DISABLED)
-        // processUsersWithDelay();
 
         // Handle delete action
         document.querySelectorAll(".delete-btn").forEach(button => {
@@ -245,7 +213,7 @@
                 const { uid, action } = this.dataset;
                 if (action === "deactivate" && !confirm(`Deactivate ${uid}? They will be blocked until verified again.`)) return;
                 const request = { method: "POST" };
-                if (this.dataset.promptDays) {  // the number of days is the Teacher's or Admin's to choose
+                if (this.dataset.promptDays) {
                     const answer = prompt(`Verify ${uid} for how many days?`, this.dataset.promptDays);
                     if (answer === null) return;
                     request.headers = { "Content-Type": "application/json" };
@@ -312,6 +280,75 @@
                         alert("Error resetting password.");
                     });
             });
+        });
+
+        // Handle View Survey Results action
+        const surveyModalElement = document.getElementById("surveyModal");
+        const surveyModal = new bootstrap.Modal(surveyModalElement);
+
+        $(document).on("click", ".view-survey-btn", function () {
+            const uid = this.dataset.uid;
+            document.getElementById("surveyModalUid").textContent = uid;
+            
+            // Set loading state
+            document.getElementById("surveyModalBody").innerHTML = `
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            surveyModal.show();
+
+            fetch(`/api/profile/ccae/results`)
+                .then(response => response.json())
+                .then(data => {
+                    const results = data.results || [];
+                    const userResults = results.filter(r => r.uid === uid || !r.uid);
+
+                    if (userResults.length === 0) {
+                        document.getElementById("surveyModalBody").innerHTML = `
+                            <p class="text-muted text-center my-3">No survey submissions found for this user.</p>
+                        `;
+                        return;
+                    }
+
+                    let html = '<div class="accordion" id="surveyAccordion">';
+                    userResults.forEach((res, index) => {
+                        html += `
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading${index}">
+                                    <button class="accordion-button ${index !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                        Submission #${index + 1} — ${new Date(res.submitted_at).toLocaleString()}
+                                    </button>
+                                </h2>
+                                <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#surveyAccordion">
+                                    <div class="accordion-body">
+                                        <p><strong>Discovery Source:</strong> ${res.discovery_source}</p>
+                                        <p><strong>Visit Frequency:</strong> ${res.visit_frequency}</p>
+                                        <p><strong>Main Reason:</strong> ${res.main_reason}</p>
+                                        <p><strong>Travel Distance:</strong> ${res.travel_distance}</p>
+                                        <p><strong>Ticket Budget:</strong> ${res.ticket_budget}</p>
+                                        <p><strong>Browsing Preference:</strong> ${res.browsing_preference}</p>
+                                        <p><strong>Event Types:</strong> ${Array.isArray(res.event_types_interested) ? res.event_types_interested.join(', ') : 'None'}</p>
+                                        <p><strong>Decision Factors:</strong> ${Array.isArray(res.decision_factors) ? res.decision_factors.join(', ') : 'None'}</p>
+                                        ${res.improvements_feedback ? `<p><strong>Feedback:</strong> ${res.improvements_feedback}</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+
+                    document.getElementById("surveyModalBody").innerHTML = html;
+                })
+                .catch(error => {
+                    console.error("Error loading survey results:", error);
+                    document.getElementById("surveyModalBody").innerHTML = `
+                        <p class="text-danger text-center my-3">Failed to load survey results.</p>
+                    `;
+                });
         });
     });
 </script>
