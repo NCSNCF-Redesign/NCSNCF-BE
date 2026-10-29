@@ -1,27 +1,35 @@
 from datetime import datetime
 from __init__ import db
 
-class CCAESurvey(db.Model):
-    __tablename__ = 'ccae_surveys'
+class NCSNCFSurvey(db.Model):
+    __tablename__ = 'ncsncf_surveys'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Links to User model
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    organization = db.Column(db.String(255), nullable=False)
-    discovery_source = db.Column(db.String(255), nullable=True)
-    visit_frequency = db.Column(db.String(255), nullable=True)
-    event_types_interested = db.Column(db.JSON, nullable=True)       # Stores list of strings
-    attends_with = db.Column(db.String(255), nullable=True)
-    main_reason = db.Column(db.String(255), nullable=True)
-    travel_distance = db.Column(db.String(255), nullable=True)
-    discovery_channels = db.Column(db.JSON, nullable=True)           # Stores list of strings
-    decision_factors = db.Column(db.JSON, nullable=True)             # Stores list of strings
-    ticket_budget = db.Column(db.String(255), nullable=True)
-    attendance_barriers = db.Column(db.String(255), nullable=True)
-    improvements_feedback = db.Column(db.Text, nullable=True)
-    browsing_preference = db.Column(db.String(255), nullable=True)
-    accessibility_importance = db.Column(db.String(255), nullable=True)
+    # Metadata & Base Info
+    organization = db.Column(db.String(255), nullable=False, default="North County Special Needs Community Foundation")
+    
+    # Survey Questions 1-18
+    discovery_source = db.Column(db.String(255), nullable=True)        # Q1
+    visit_frequency = db.Column(db.String(255), nullable=True)         # Q2
+    interested_info = db.Column(db.JSON, nullable=True)                 # Q3 (List)
+    community_connection = db.Column(db.String(255), nullable=True)    # Q4
+    main_reason = db.Column(db.String(255), nullable=True)             # Q5
+    location = db.Column(db.String(255), nullable=True)                # Q6
+    find_methods = db.Column(db.JSON, nullable=True)                    # Q7 (List)
+    important_info = db.Column(db.JSON, nullable=True)                  # Q8 (List)
+    cost_info = db.Column(db.JSON, nullable=True)                       # Q9 (List)
+    difficulties = db.Column(db.JSON, nullable=True)                    # Q10 (List)
+    improvements_feedback = db.Column(db.Text, nullable=True)          # Q11 (Free Text)
+    useful_features = db.Column(db.JSON, nullable=True)                 # Q12 (List)
+    browsing_preference = db.Column(db.String(255), nullable=True)      # Q13
+    design_importance = db.Column(db.String(255), nullable=True)        # Q14
+    ease_of_use = db.Column(db.String(255), nullable=True)              # Q15
+    accessibility_features = db.Column(db.JSON, nullable=True)         # Q16 (List)
+    learning_pref = db.Column(db.JSON, nullable=True)                  # Q17 (List)
+    involvement_drivers = db.Column(db.JSON, nullable=True)             # Q18 (List)
 
     def __init__(self, user_id=None, **kwargs):
         self.user_id = user_id
@@ -33,21 +41,26 @@ class CCAESurvey(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "submitted_at": self.submitted_at.isoformat(),
+            "submitted_at": self.submitted_at.isoformat() if self.submitted_at else None,
             "organization": self.organization,
             "discovery_source": self.discovery_source,
             "visit_frequency": self.visit_frequency,
-            "event_types_interested": self.event_types_interested or [],
-            "attends_with": self.attends_with,
+            "interested_info": self.interested_info or [],
+            "community_connection": self.community_connection,
             "main_reason": self.main_reason,
-            "travel_distance": self.travel_distance,
-            "discovery_channels": self.discovery_channels or [],
-            "decision_factors": self.decision_factors or [],
-            "ticket_budget": self.ticket_budget,
-            "attendance_barriers": self.attendance_barriers,
-            "improvements_feedback": self.improvements_feedback,
+            "location": self.location,
+            "find_methods": self.find_methods or [],
+            "important_info": self.important_info or [],
+            "cost_info": self.cost_info or [],
+            "difficulties": self.difficulties or [],
+            "improvements_feedback": self.improvements_feedback or "",
+            "useful_features": self.useful_features or [],
             "browsing_preference": self.browsing_preference,
-            "accessibility_importance": self.accessibility_importance
+            "design_importance": self.design_importance,
+            "ease_of_use": self.ease_of_use,
+            "accessibility_features": self.accessibility_features or [],
+            "learning_pref": self.learning_pref or [],
+            "involvement_drivers": self.involvement_drivers or []
         }
 
     def create(self):
