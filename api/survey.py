@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_restful import Api, Resource
+from flask_login import current_user
 from __init__ import db
-from current_user_helper import g  # Adjust import based on your auth setup
-from model.ncsncf_survey import NCSNCFSurvey  # Adjust import path if needed
+from model.survey import NCSNCFSurvey
 
-ncsncf_api = Blueprint('ncsncf_api', __name__)
-api = Api(ncsncf_api)
+survey_api = Blueprint('survey_api', __name__)
+api = Api(survey_api)
 
 class NCSNCFSurveyAPI(Resource):
     def post(self):
@@ -19,16 +19,16 @@ class NCSNCFSurveyAPI(Resource):
             if not body.get(field):
                 return {"message": f"Missing required field: {field}"}, 400
 
-        user_id = getattr(g, 'current_user', None).id if hasattr(g, 'current_user') and g.current_user else None
-
+        # Authenticate user via Flask-Login
+        user_id = current_user.id if current_user.is_authenticated else None
         if not user_id:
             return {"message": "User authentication required"}, 401
 
-        # Check if an existing survey record exists for this user
+        # Check for an existing survey submission by this user
         survey = NCSNCFSurvey.query.filter_by(user_id=user_id).first()
 
         if survey:
-            # Update existing survey fields (Upsert)
+            # Update existing user response
             survey.organization = body.get('organization', survey.organization)
             survey.discovery_source = body.get('discovery_source')
             survey.visit_frequency = body.get('visit_frequency')
@@ -49,7 +49,7 @@ class NCSNCFSurveyAPI(Resource):
             survey.learning_pref = body.get('learning_pref', [])
             survey.involvement_drivers = body.get('involvement_drivers', [])
         else:
-            # Create a new survey record
+            # Create a new survey record bound to user_id
             survey = NCSNCFSurvey(
                 user_id=user_id,
                 organization=body.get('organization', 'North County Special Needs Community Foundation'),
@@ -82,12 +82,11 @@ class NCSNCFSurveyAPI(Resource):
             return {"message": f"Database error: {str(e)}"}, 500
 
     def get(self):
-        user_id = getattr(g, 'current_user', None).id if hasattr(g, 'current_user') and g.current_user else None
-
+        user_id = current_user.id if current_user.is_authenticated else None
         if not user_id:
             return {"message": "User authentication required"}, 401
 
-        # Retrieve ONLY the survey that belongs to the current user
+        # Fetch only the logged-in user's survey record
         survey = NCSNCFSurvey.query.filter_by(user_id=user_id).first()
         if not survey:
             return {"message": "No survey found for current user"}, 404
