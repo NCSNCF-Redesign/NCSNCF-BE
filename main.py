@@ -171,7 +171,7 @@ def congrats():
 
     messages = CongratsMessage.get_by_user(current_user.id)
     return render_template("congrats.html", messages=messages, project="Congrats Messages")
-    
+
 @app.route('/logout')
 def logout():
     logout_user()
@@ -263,7 +263,10 @@ def update_user(uid):
         print("User not found.")  # Log when user is not found
         return jsonify({"message": "User not found."}), 404
 
-
+@app.route('/survey_results')
+@login_required
+def survey_results():
+    return render_template("survey_results.html")
 
     
 # Create an AppGroup for custom commands

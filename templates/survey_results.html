@@ -1,0 +1,142 @@
+{% extends "layouts/base.html" %}
+
+{% block body %}
+<div class="container mt-5">
+    <h2>All NCSNCF Community Survey Responses</h2>
+    <p class="text-muted">Overview of user submissions collected from the survey.</p>
+
+    <div id="surveyLoading" class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div id="surveyError" class="alert alert-danger d-none" role="alert"></div>
+
+    <div id="surveyResultsContainer" class="d-none">
+        <table class="table table-striped table-hover align-middle mt-3" id="surveyResponsesTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>User (UID)</th>
+                    <th>Submitted At</th>
+                    <th>Discovery Source</th>
+                    <th>Visit Frequency</th>
+                    <th>Main Reason</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="surveyTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal for viewing detailed answers -->
+<div class="modal fade" id="surveyDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Survey Details — <span id="modalUid"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const loadingEl = document.getElementById('surveyLoading');
+    const containerEl = document.getElementById('surveyResultsContainer');
+    const errorEl = document.getElementById('surveyError');
+    const tbody = document.getElementById('surveyTableBody');
+
+    try {
+        const response = await fetch('/api/profile/ncsncf', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch survey responses (Status ${response.status}). Ensure you are logged in as Staff/Admin.`);
+        }
+
+        const data = await response.json();
+        const results = data.results || (data.id ? [data] : []);
+
+        loadingEl.classList.add('d-none');
+
+        if (!results.length) {
+            errorEl.textContent = "No survey submissions found in the database.";
+            errorEl.classList.remove('d-none');
+            return;
+        }
+
+        containerEl.classList.remove('d-none');
+        window.allSurveyResults = results;
+
+        tbody.innerHTML = results.map((item, index) => `
+            <tr>
+                <td><strong>${item.uid || 'Anonymous / Unassigned'}</strong></td>
+                <td>${item.submitted_at ? new Date(item.submitted_at).toLocaleString() : 'N/A'}</td>
+                <td>${item.discovery_source || 'N/A'}</td>
+                <td>${item.visit_frequency || 'N/A'}</td>
+                <td>${item.main_reason || 'N/A'}</td>
+                <td>${item.location || 'N/A'}</td>
+                <td>
+                    <button class="btn btn-sm btn-info text-white" onclick="viewSurveyDetails(${index})">View Details</button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        loadingEl.classList.add('d-none');
+        errorEl.textContent = err.message || "Error loading survey responses.";
+        errorEl.classList.remove('d-none');
+    }
+});
+
+function viewSurveyDetails(index) {
+    const res = window.allSurveyResults[index];
+    if (!res) return;
+
+    document.getElementById('modalUid').textContent = res.uid || 'Anonymous';
+    
+    const formatList = (list) => Array.isArray(list) && list.length ? list.join(', ') : 'None';
+
+    const html = `
+        <div class="mb-3">
+            <p><strong>User UID:</strong> ${res.uid || 'N/A'} (User ID: ${res.user_id || 'N/A'})</p>
+            <p><strong>Submitted At:</strong> ${res.submitted_at ? new Date(res.submitted_at).toLocaleString() : 'N/A'}</p>
+            <p><strong>Organization:</strong> ${res.organization || 'N/A'}</p>
+        </div>
+        <hr>
+        <div class="row g-2">
+            <div class="col-12"><strong>1. Discovery Source:</strong> ${res.discovery_source || 'N/A'}</div>
+            <div class="col-12"><strong>2. Visit Frequency:</strong> ${res.visit_frequency || 'N/A'}</div>
+            <div class="col-12"><strong>3. Interested Info:</strong> ${formatList(res.interested_info)}</div>
+            <div class="col-12"><strong>4. Community Connection:</strong> ${res.community_connection || 'N/A'}</div>
+            <div class="col-12"><strong>5. Main Reason:</strong> ${res.main_reason || 'N/A'}</div>
+            <div class="col-12"><strong>6. Location:</strong> ${res.location || 'N/A'}</div>
+            <div class="col-12"><strong>7. Find Methods:</strong> ${formatList(res.find_methods)}</div>
+            <div class="col-12"><strong>8. Important Info:</strong> ${formatList(res.important_info)}</div>
+            <div class="col-12"><strong>9. Cost Info:</strong> ${formatList(res.cost_info)}</div>
+            <div class="col-12"><strong>10. Difficulties:</strong> ${formatList(res.difficulties)}</div>
+            <div class="col-12"><strong>11. Improvements Feedback:</strong> ${res.improvements_feedback || 'None'}</div>
+            <div class="col-12"><strong>12. Useful Features:</strong> ${formatList(res.useful_features)}</div>
+            <div class="col-12"><strong>13. Browsing Preference:</strong> ${res.browsing_preference || 'N/A'}</div>
+            <div class="col-12"><strong>14. Design Importance:</strong> ${res.design_importance || 'N/A'}</div>
+            <div class="col-12"><strong>15. Ease of Use:</strong> ${res.ease_of_use || 'N/A'}</div>
+            <div class="col-12"><strong>16. Accessibility Features:</strong> ${formatList(res.accessibility_features)}</div>
+            <div class="col-12"><strong>17. Learning Preferences:</strong> ${formatList(res.learning_pref)}</div>
+            <div class="col-12"><strong>18. Involvement Drivers:</strong> ${formatList(res.involvement_drivers)}</div>
+        </div>
+    `;
+
+    document.getElementById('modalBody').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('surveyDetailModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
