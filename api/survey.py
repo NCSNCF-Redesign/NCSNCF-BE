@@ -1,34 +1,33 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from flask_restful import Api, Resource
-from flask_login import current_user
 from __init__ import db
+from api.authorize import token_required
 from model.survey import NCSNCFSurvey
+from model.user import User
 
 survey_api = Blueprint('survey_api', __name__)
 api = Api(survey_api)
 
 class NCSNCFSurveyAPI(Resource):
+    @token_required()
     def post(self):
+        current_user = g.current_user
+        if not current_user:
+            return {"message": "User authentication required"}, 401
+
         body = request.get_json()
         if not body:
             return {"message": "No input data provided"}, 400
 
-        # Validate mandatory fields
         required_fields = ['discovery_source', 'visit_frequency', 'main_reason']
         for field in required_fields:
             if not body.get(field):
                 return {"message": f"Missing required field: {field}"}, 400
 
-        # Authenticate user via Flask-Login
-        user_id = current_user.id if current_user.is_authenticated else None
-        if not user_id:
-            return {"message": "User authentication required"}, 401
-
-        # Check for an existing survey submission by this user
+        user_id = current_user.id
         survey = NCSNCFSurvey.query.filter_by(user_id=user_id).first()
 
         if survey:
-            # Update existing user response
             survey.organization = body.get('organization', survey.organization)
             survey.discovery_source = body.get('discovery_source')
             survey.visit_frequency = body.get('visit_frequency')
@@ -49,7 +48,6 @@ class NCSNCFSurveyAPI(Resource):
             survey.learning_pref = body.get('learning_pref', [])
             survey.involvement_drivers = body.get('involvement_drivers', [])
         else:
-            # Create a new survey record bound to user_id
             survey = NCSNCFSurvey(
                 user_id=user_id,
                 organization=body.get('organization', 'North County Special Needs Community Foundation'),
@@ -81,13 +79,28 @@ class NCSNCFSurveyAPI(Resource):
             db.session.rollback()
             return {"message": f"Database error: {str(e)}"}, 500
 
+    @token_required()
     def get(self):
-        user_id = current_user.id if current_user.is_authenticated else None
-        if not user_id:
+        current_user = g.current_user
+        if not current_user:
             return {"message": "User authentication required"}, 401
 
-        # Fetch only the logged-in user's survey record
-        survey = NCSNCFSurvey.query.filter_by(user_id=user_id).first()
+        # Staff/Admins get all survey submissions formatted for u2table
+        if current_user.is_admin() or current_user.is_teacher():
+            surveys = NCSNCFSurvey.query.all()
+            results = []
+            for s in surveys:
+                data = s.read()
+                if s.user_id:
+                    user = User.query.get(s.user_id)
+                    data['uid'] = user.uid if user else None
+                else:
+                    data['uid'] = None
+                results.append(data)
+            return jsonify({"results": results})
+
+        # Regular user fetches only their own survey
+        survey = NCSNCFSurvey.query.filter_by(user_id=current_user.id).first()
         if not survey:
             return {"message": "No survey found for current user"}, 404
 

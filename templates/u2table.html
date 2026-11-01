@@ -155,131 +155,7 @@
 </div>
 
 <script>
-    $(document).ready(function () {
-        // Initialize DataTables
-        const table = $("#userTable").DataTable();
-        table.page.len(-1).draw();
-
-        // Filter by active state and role
-        let statusFilter = "all";
-        let roleFilter = "";
-        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-            if (settings.nTable.id !== "userTable") return true;
-            const row = table.row(dataIndex).node();
-            const statusMatches = statusFilter === "all" || row.dataset.active === statusFilter;
-            const roleMatches = roleFilter === "" || row.dataset.role === roleFilter;
-            return statusMatches && roleMatches;
-        });
-
-        document.querySelectorAll("#accountFilters [data-status]").forEach(button => {
-            button.addEventListener("click", function () {
-                statusFilter = this.dataset.status;
-                document.querySelectorAll("#accountFilters [data-status]").forEach(b => b.classList.toggle("active", b === this));
-                table.draw();
-            });
-        });
-
-        const roleSelect = document.getElementById("roleFilter");
-        if (roleSelect) {
-            roleSelect.addEventListener("change", function () {
-                roleFilter = this.value;
-                table.draw();
-            });
-        }
-
-        // Delegated Event Handlers (compatible with DataTables DOM rerendering)
-        
-        // Handle delete action
-        $(document).on("click", ".delete-btn", function () {
-            const id = this.dataset.id;
-            fetch(`/users/delete/${id}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-            })
-                .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                .then(({ ok, data }) => {
-                    if (!ok) throw new Error(data.error || data.message || "Could not delete the user.");
-                    alert(data.message || "User deleted successfully.");
-                    location.reload();
-                })
-                .catch(error => {
-                    console.error("Error deleting user:", error);
-                    alert(error.message || "Error deleting user.");
-                });
-        });
-
-        // Handle activate / verify / deactivate
-        $(document).on("click", ".status-btn", function () {
-            const { uid, action } = this.dataset;
-            if (action === "deactivate" && !confirm(`Deactivate ${uid}? They will be blocked until verified again.`)) return;
-            const request = { method: "POST" };
-            if (this.dataset.promptDays) {
-                const answer = prompt(`Verify ${uid} for how many days?`, this.dataset.promptDays);
-                if (answer === null) return;
-                request.headers = { "Content-Type": "application/json" };
-                request.body = JSON.stringify({ days: Number(answer) });
-            }
-            fetch(`/api/user/${uid}/${action}`, request)
-                .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                .then(({ ok, data }) => {
-                    if (!ok) throw new Error(data.message || "Request failed");
-                    location.reload();
-                })
-                .catch(error => {
-                    console.error("Error changing status:", error);
-                    alert(error.message || "Error changing status.");
-                });
-        });
-
-        // Handle Edit Role
-        const roleModalElement = document.getElementById("roleModal");
-        if (roleModalElement) {
-            const roleModal = new bootstrap.Modal(roleModalElement);
-            let editingUid = null;
-
-            $(document).on("click", ".edit-btn", function () {
-                editingUid = this.dataset.uid;
-                document.getElementById("roleModalUid").textContent = editingUid;
-                document.getElementById("roleSelect").value = this.dataset.role;
-                roleModal.show();
-            });
-
-            document.getElementById("roleSave").addEventListener("click", function () {
-                fetch(`/api/user/${editingUid}/role`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ role: document.getElementById("roleSelect").value })
-                })
-                    .then(response => response.json().then(data => ({ ok: response.ok, data })))
-                    .then(({ ok, data }) => {
-                        if (!ok) throw new Error(data.message || "Could not change the role");
-                        location.reload();
-                    })
-                    .catch(error => {
-                        console.error("Error changing role:", error);
-                        alert(error.message || "Error changing role.");
-                    });
-            });
-        }
-
-        // Handle Reset Password
-        $(document).on("click", ".reset-password-btn", function () {
-            const id = this.dataset.id;
-            fetch(`/users/reset_password/${id}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-            })
-                .then(response => response.json())
-                .then(data => {
-                    alert(data.message || "Password reset successfully.");
-                })
-                .catch(error => {
-                    console.error("Error resetting password:", error);
-                    alert("Error resetting password.");
-                });
-        });
-
-        // Handle View Survey Results (DataTables delegated click listener)
+// Handle View Survey Results
         const surveyModalElement = document.getElementById("surveyModal");
         const surveyModal = new bootstrap.Modal(surveyModalElement);
 
@@ -297,15 +173,14 @@
             
             surveyModal.show();
 
-            fetch(`/api/profile/ccae/results`, { credentials: 'include' })
+            fetch(`/api/profile/ncsncf`, { credentials: 'include' })
                 .then(response => {
                     if (!response.ok) throw new Error("Network response was not ok");
                     return response.json();
                 })
                 .then(data => {
-                    const results = data.results || [];
+                    const results = data.results || (data.id ? [data] : []);
                     
-                    // Match submissions by UID. Fall back to unassigned submissions if user wasn't logged in when submitting.
                     let userResults = results.filter(r => r.uid === uid);
                     let isFallback = false;
 
@@ -316,14 +191,14 @@
 
                     if (userResults.length === 0) {
                         document.getElementById("surveyModalBody").innerHTML = `
-                            <p class="text-muted text-center my-3">No survey submissions found in the database.</p>
+                            <p class="text-muted text-center my-3">No survey submissions found for this user.</p>
                         `;
                         return;
                     }
 
                     let html = '';
                     if (isFallback) {
-                        html += `<div class="alert alert-warning text-sm mb-3">Showing anonymous / unassigned survey submissions (user was not logged in during submission).</div>`;
+                        html += `<div class="alert alert-warning text-sm mb-3">Showing anonymous / unassigned survey submissions.</div>`;
                     }
 
                     html += '<div class="accordion" id="surveyAccordion">';
@@ -332,19 +207,22 @@
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="heading${index}">
                                     <button class="accordion-button ${index !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
-                                        Submission #${index + 1} — ${new Date(res.submitted_at).toLocaleString()}
+                                        Submission #${index + 1} — ${res.submitted_at ? new Date(res.submitted_at).toLocaleString() : 'N/A'}
                                     </button>
                                 </h2>
                                 <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#surveyAccordion">
                                     <div class="accordion-body">
                                         <p><strong>Discovery Source:</strong> ${res.discovery_source || 'N/A'}</p>
                                         <p><strong>Visit Frequency:</strong> ${res.visit_frequency || 'N/A'}</p>
+                                        <p><strong>Community Connection:</strong> ${res.community_connection || 'N/A'}</p>
                                         <p><strong>Main Reason:</strong> ${res.main_reason || 'N/A'}</p>
-                                        <p><strong>Travel Distance:</strong> ${res.travel_distance || 'N/A'}</p>
-                                        <p><strong>Ticket Budget:</strong> ${res.ticket_budget || 'N/A'}</p>
+                                        <p><strong>Location:</strong> ${res.location || 'N/A'}</p>
+                                        <p><strong>Ease of Use:</strong> ${res.ease_of_use || 'N/A'}</p>
                                         <p><strong>Browsing Preference:</strong> ${res.browsing_preference || 'N/A'}</p>
-                                        <p><strong>Event Types:</strong> ${Array.isArray(res.event_types_interested) && res.event_types_interested.length > 0 ? res.event_types_interested.join(', ') : 'None'}</p>
-                                        <p><strong>Decision Factors:</strong> ${Array.isArray(res.decision_factors) && res.decision_factors.length > 0 ? res.decision_factors.join(', ') : 'None'}</p>
+                                        <p><strong>Interested Info:</strong> ${Array.isArray(res.interested_info) && res.interested_info.length > 0 ? res.interested_info.join(', ') : 'None'}</p>
+                                        <p><strong>Find Methods:</strong> ${Array.isArray(res.find_methods) && res.find_methods.length > 0 ? res.find_methods.join(', ') : 'None'}</p>
+                                        <p><strong>Difficulties:</strong> ${Array.isArray(res.difficulties) && res.difficulties.length > 0 ? res.difficulties.join(', ') : 'None'}</p>
+                                        <p><strong>Useful Features:</strong> ${Array.isArray(res.useful_features) && res.useful_features.length > 0 ? res.useful_features.join(', ') : 'None'}</p>
                                         ${res.improvements_feedback ? `<p><strong>Feedback:</strong> ${res.improvements_feedback}</p>` : ''}
                                     </div>
                                 </div>
@@ -362,7 +240,6 @@
                     `;
                 });
         });
-    });
 </script>
 
 {% endblock %}
