@@ -1,7 +1,7 @@
 {
     "rest-client.environmentVariables": {
         "$shared": {
-            "baseUrl": "http://127.0.0.1:8587"
+            "baseUrl": "http://127.0.0.1:8640"
         },
         "local": {},
         "deployed": {

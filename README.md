@@ -130,11 +130,11 @@ pip install -r requirements.txt
     - Start with Play button
       - Play button sub option contains Debug
     - Click on localhost:8087 in terminal to launch
-      - Output window will contain page to launch http://localhost:8587
+      - Output window will contain page to launch http://localhost:8640
     - Login using your secrets from env
 
   - Basic API test
-    - [Jokes](http://localhost:8587/api/jokes/)
+    - [Jokes](http://localhost:8640/api/jokes/)
 
 ### HTTP requests in VS Code
 
@@ -148,7 +148,7 @@ The shared `baseUrl` configuration lives in
 from the command palette (or click the REST Client environment in the status
 bar) to select:
 
-- **local**: `http://127.0.0.1:8587`, inherited from `$shared`.
+- **local**: `http://127.0.0.1:8640`, inherited from `$shared`.
 - **deployed**: `https://flask.opencodingsociety.com`.
 
 With **No Environment** selected, the shared localhost URL is used as a safe
