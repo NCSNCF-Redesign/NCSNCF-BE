@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy service code
 COPY . /app
 
-EXPOSE 8590
+EXPOSE 8461
 
 # Run the websocket service
 CMD ["python", "websocket.py"]
