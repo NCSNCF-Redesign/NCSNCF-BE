@@ -12,8 +12,8 @@ load_dotenv()
 # Setup of key Flask object (app)
 app = Flask(__name__)
 
-# Configure Flask Port, default to 8640 which is same as Docker setup
-app.config['FLASK_PORT'] = int(os.environ.get('FLASK_PORT') or 8640)
+# Configure Flask Port, default to 8460 which is same as Docker setup
+app.config['FLASK_PORT'] = int(os.environ.get('FLASK_PORT') or 8460)
 
 # Configure Code Runner port, default 8591
 app.config['RUNNER_PORT'] = int(os.environ.get('RUNNER_PORT') or 8591)

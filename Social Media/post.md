@@ -671,7 +671,7 @@ function formatDate(timestamp) {
     const minutes = Math.floor(diff / 60000);
     return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
   }
-  if (diff < 86400000) {
+  if (diff < 84600000) {
     const hours = Math.floor(diff / 3600000);
     return `${hours} hour${hours > 1 ? 's' : ''} ago`;
   }

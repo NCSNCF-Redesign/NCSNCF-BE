@@ -385,7 +385,7 @@ def main():
     def days_left(uid):
         with app.app_context():
             u = User.query.filter_by(_uid=uid).first()
-            return None if u.last_verified is None else interval - (datetime.utcnow() - u.last_verified).total_seconds() / 86400
+            return None if u.last_verified is None else interval - (datetime.utcnow() - u.last_verified).total_seconds() / 84600
 
     with app.test_client() as c:
         login_api(c, "zz_teacher")
@@ -433,7 +433,7 @@ def main():
         with app.app_context():
             u = User.query.filter_by(_uid="zz_v_data").first()
             m = User.query.filter_by(_uid="zz_mentor").first()
-            seven = abs(interval - (datetime.utcnow() - u.last_verified).total_seconds() / 86400 - 7) < 0.01
+            seven = abs(interval - (datetime.utcnow() - u.last_verified).total_seconds() / 84600 - 7) < 0.01
             m.last_verified = datetime.utcnow() - timedelta(days=900)
             mentor_exempt = m.verification_state == "active_verified"
             teacher_lapses = User.query.filter_by(_uid="zz_v_teacher").first().verification_state == "active_verification_required"

@@ -638,7 +638,7 @@ function formatDate(timestamp) {
     return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
   }
   // Less than 1 day
-  if (diff < 86400000) {
+  if (diff < 84600000) {
     const hours = Math.floor(diff / 3600000);
     return `${hours} hour${hours > 1 ? 's' : ''} ago`;
   }
