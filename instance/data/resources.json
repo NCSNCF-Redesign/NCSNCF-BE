@@ -1,0 +1,412 @@
+[
+  {
+    "category": "Advocacy Services",
+    "description": "",
+    "items": [
+      {
+        "title": "Access to Independence: State Council on Developmental Disabilities",
+        "url": "https://scdd.ca.gov/",
+        "description": ""
+      },
+      {
+        "title": "Disability Rights California - Clients' Rights Advocacy",
+        "url": "https://www.disabilityrightsca.org/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Aging & Life Planning",
+    "description": "",
+    "items": [
+      {
+        "title": "Life Planning - Home of Guiding Hands",
+        "url": "https://www.guidinghands.org/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Autism",
+    "description": "",
+    "items": [
+      {
+        "title": "Autism Society of San Diego",
+        "url": "https://autismsocietysandiego.org/",
+        "description": ""
+      },
+      {
+        "title": "Autism Support of Imperial",
+        "url": "https://www.facebook.com/AutismSupportOfImperialCounty/",
+        "description": ""
+      },
+      {
+        "title": "Best Step Forward of Imperial",
+        "url": "https://beststepforward.org/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Assistive Technology",
+    "description": "",
+    "items": [
+      {
+        "title": "United Cerebral Palsy (UCP)",
+        "url": "https://ucp.org/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Benefits",
+    "description": "",
+    "items": [
+      {
+        "title": "ACCESS Flyer",
+        "url": "https://www.sandiegocounty.gov/hhsa/programs/ssp/access_customer_service_center/",
+        "description": ""
+      },
+      {
+        "title": "Benefit Finder",
+        "url": "https://www.benefits.gov/benefit-finder",
+        "description": ""
+      },
+      {
+        "title": "California Children's Services",
+        "url": "https://www.dhcs.ca.gov/services/ccs",
+        "description": ""
+      },
+      {
+        "title": "Healthy Families America",
+        "url": "https://www.healthyfamiliesamerica.org/",
+        "description": ""
+      },
+      {
+        "title": "In-Home Support Services (IHSS)",
+        "url": "https://www.cdss.ca.gov/in-home-supportive-services",
+        "description": ""
+      },
+      {
+        "title": "Medi-Cal Programs",
+        "url": "https://www.dhcs.ca.gov/services/medi-cal",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "CalFresh",
+    "description": "A Supplemental Nutrition Assistance Program that provides financial assistance for purchasing food to low-income California residents.",
+    "items": [
+      {
+        "title": "CalFresh Information",
+        "url": "https://www.cdss.ca.gov/calfresh",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Cerebral Palsy",
+    "description": "",
+    "items": [
+      {
+        "title": "www.cerebralpalsyguidance.com",
+        "url": "https://www.cerebralpalsyguidance.com/",
+        "description": ""
+      },
+      {
+        "title": "Cerebral Palsy Hub - Educational & Family Support Resources",
+        "url": "https://www.cerebralpalsyhub.org/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Childcare & Parenting",
+    "description": "",
+    "items": [
+      {
+        "title": "Children's Care Connection (C3)",
+        "url": "https://www.c3sandiego.org/",
+        "description": ""
+      },
+      {
+        "title": "YMCA Child Care Resources",
+        "url": "https://www.ymcasd.org/community-support/child-care-resource-service",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Down Syndrome",
+    "description": "",
+    "items": [
+      {
+        "title": "Down Syndrome Association of SD",
+        "url": "https://www.dsasdonline.org/",
+        "phone": "(619) 594-7389",
+        "description": ""
+      },
+      {
+        "title": "Down Syndrome Action",
+        "url": "mailto:dsaction@dsaction.com",
+        "phone": "(619) 694-4615",
+        "email": "dsaction@dsaction.com",
+        "description": ""
+      },
+      {
+        "title": "Down Syndrome Center at Rady Children's Hospital",
+        "url": "https://www.rchsd.org/programs-services/down-syndrome-center/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Emergency Preparedness",
+    "description": "",
+    "items": [
+      {
+        "title": "Power Shutoffs - Resource Guide",
+        "url": "https://www.cpuc.ca.gov/psps/",
+        "description": ""
+      },
+      {
+        "title": "Personal Emergency Plan",
+        "url": "https://www.ready.gov/plan",
+        "description": ""
+      },
+      {
+        "title": "Hotline for Power Shutoffs",
+        "url": "https://www.sdge.com/wildfire-safety/public-safety-power-shutoffs",
+        "description": ""
+      },
+      {
+        "title": "Response.CA.GOV",
+        "url": "https://response.ca.gov/",
+        "description": ""
+      },
+      {
+        "title": "Backup Generator Fact Sheet",
+        "url": "https://www.energy.ca.gov/",
+        "description": ""
+      },
+      {
+        "title": "Emergency Power Planning",
+        "url": "https://www.ready.gov/power-outages",
+        "description": ""
+      },
+      {
+        "title": "Preparing For a Power Outage",
+        "url": "https://www.redcross.org/get-help/how-to-prepare-for-emergencies/types-of-emergencies/power-outage.html",
+        "description": ""
+      },
+      {
+        "title": "Public Safety Power Shutoff",
+        "url": "https://www.sdge.com/psps",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Employment",
+    "description": "",
+    "items": [
+      {
+        "title": "CA Department of Rehabilitation",
+        "url": "https://www.dor.ca.gov/",
+        "description": ""
+      },
+      {
+        "title": "Employment First",
+        "url": "https://www.dds.ca.gov/initiatives/employment-first/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Housing",
+    "description": "",
+    "items": [
+      {
+        "title": "Southern CA Housing Collaborative",
+        "url": "https://socalhc.org/",
+        "description": "Assists in locating affordable housing for persons with developmental disabilities."
+      },
+      {
+        "title": "Section 8 HUD Housing",
+        "url": "https://www.hud.gov/topics/housing_choice_voucher_program_section_8",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Protecting Access to Services",
+    "description": "Resources for California's Immigrant Communities",
+    "items": [
+      {
+        "title": "Resources for California's Immigrant Communities",
+        "url": "https://www.cdss.ca.gov/immigration-services",
+        "description": ""
+      },
+      {
+        "title": "Immigrant Legal Resource Center (ILRC)",
+        "url": "https://www.ilrc.org/",
+        "description": ""
+      },
+      {
+        "title": "California Self Help Guide",
+        "url": "https://selfhelp.courts.ca.gov/",
+        "description": ""
+      },
+      {
+        "title": "United We Dream",
+        "url": "https://unitedwedream.org/",
+        "description": ""
+      },
+      {
+        "title": "USC Law Students Hotline (Assistance w/Motion to Change Hearing Format)",
+        "url": "tel:888-462-5211",
+        "phone": "888-462-5211",
+        "description": ""
+      },
+      {
+        "title": "ICE VOICE (Victims of Immigration Crime Engagement) Hotline",
+        "url": "tel:1-855-488-6423",
+        "phone": "1-855-48-VOICE (1-855-488-6423)",
+        "description": "Ask about a detainee, locating someone, or reporting the separation of a parent and child."
+      },
+      {
+        "title": "ICE Detention Reporting & Information Line (DRIL)",
+        "url": "tel:1-888-351-4024",
+        "phone": "1-888-351-4024",
+        "description": "General enforcement, detention conditions, abuse, trafficked individuals, or minors."
+      },
+      {
+        "title": "Freedom for Immigrants National Detention Hotline",
+        "url": "tel:9233",
+        "phone": "DIAL 9233# (Mon-Fri, 8 am-8 pm)",
+        "description": "Connects immigrants to family, resources, and free abuse documentation support."
+      },
+      {
+        "title": "ICE Online Detainee Locator System (ODLS)",
+        "url": "https://locator.ice.gov/odls/",
+        "description": "Find detainees in ICE custody or in customs and border protection's custody for more than 48 hours."
+      },
+      {
+        "title": "Immigration Services Funding Grantee Referral List",
+        "url": "https://www.cdss.ca.gov/inforesources/immigration-services/immigration-services-contractors",
+        "description": "Free immigration legal services in 5 categories."
+      },
+      {
+        "title": "Youth Legal Services Funding Primary Grantee Contact List",
+        "url": "https://www.cdss.ca.gov/inforesources/immigration-services",
+        "description": "For unaccompanied undocumented minors and immigrant youth."
+      },
+      {
+        "title": "CA Department of Social Services Removal Defense Program Primary Grantee Contact List",
+        "url": "https://www.cdss.ca.gov/inforesources/immigration-services",
+        "description": ""
+      },
+      {
+        "title": "Knowing Your Rights - English / Spanish",
+        "url": "https://www.aclu.org/know-your-rights/immigrants-rights",
+        "description": ""
+      },
+      {
+        "title": "Protect Yourself from Immigration Scams - English / Spanish",
+        "url": "https://www.consumer.ftc.gov/articles/how-avoid-scams-immigrants",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Regional Center Providers",
+    "description": "",
+    "items": [
+      {
+        "title": "Provider Directory Regional Center Communications Support Toolkit",
+        "url": "https://www.dds.ca.gov/initiatives/provider-directory/",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Safety",
+    "description": "",
+    "items": [
+      {
+        "title": "DDS Safety Net - How to help clients & families stay safe and healthy",
+        "url": "https://ddssafetynet.org/",
+        "description": ""
+      },
+      {
+        "title": "Take Me Home Registry Program",
+        "url": "https://www.sdsheriff.net/community/take-me-home",
+        "description": "A registry for individuals at risk of wandering, becoming missing or found by law enforcement who are unable to identify themselves because of their special needs."
+      },
+      {
+        "title": "A Guide to Medical Alert Systems - MedicalAlert.org",
+        "url": "https://www.medicalalert.org/",
+        "description": "How to help the seniors in your community stay independent and safe."
+      }
+    ]
+  },
+  {
+    "category": "Supported Decision Making and Limited Conservatorship",
+    "description": "",
+    "items": [
+      {
+        "title": "Decision Making Tool: When do I want support?",
+        "url": "https://supporteddecisionmaking.org/",
+        "description": ""
+      },
+      {
+        "title": "Why Supported Decision Making?",
+        "url": "https://www.dds.ca.gov/initiatives/supported-decision-making/",
+        "description": ""
+      },
+      {
+        "title": "DDS FAQs",
+        "url": "https://www.dds.ca.gov/transparency/faqs/",
+        "description": ""
+      },
+      {
+        "title": "What is Conservatorship?",
+        "url": "https://selfhelp.courts.ca.gov/conservatorship",
+        "description": ""
+      },
+      {
+        "title": "SD Probate Court: Conservatorship and Alternatives",
+        "url": "https://www.sdcourt.ca.gov/sdcourt/probate2/conservatorships",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Senior Safety",
+    "description": "",
+    "items": [
+      {
+        "title": "Senior Fall Prevention Checklist",
+        "url": "https://www.cdc.gov/steadi/pdf/steadi-brochure-checkforsafety-508.pdf",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "category": "Transportation",
+    "description": "",
+    "items": [
+      {
+        "title": "Imperial Valley Transit Access (IVT)",
+        "url": "https://www.ivtransit.com/",
+        "description": ""
+      },
+      {
+        "title": "Metropolitan Transit System (MTS)",
+        "url": "https://www.sdmts.com/",
+        "description": ""
+      }
+    ]
+  }
+]
