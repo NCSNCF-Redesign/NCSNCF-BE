@@ -56,11 +56,13 @@ from model.post import Post, init_posts
 from model.microblog import MicroBlog, Topic, initMicroblogs
 from model.leaderboard import ScoreCounterEvent, ElementaryLeaderboardEvent
 from hacks.jokes import initJokes 
+from model.calendar import Event
 # from model.announcement import Announcement ##temporary revert
 
 # server only Views
 
 import os
+from datetime import date, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -270,7 +272,45 @@ def update_user(uid):
 def survey_results():
     return render_template("survey_results.html")
 
-    
+@app.route('/events', methods=['GET', 'POST'])
+@login_required
+def manage_events():
+    if not current_user.is_admin():
+        return abort(403)
+
+    min_date = (date.today() + timedelta(days=1)).isoformat()
+    error = None
+
+    if request.method == 'POST':
+        event_date = request.form.get('date')
+        if not event_date or event_date < min_date:
+            error = "Event date must be in the future."
+        else:
+            new_event = Event(
+                title=request.form.get('title'),
+                date=event_date,
+                location=request.form.get('location'),
+                category=request.form.get('category'),
+                description=request.form.get('description', '')
+            )
+            db.session.add(new_event)
+            db.session.commit()
+            return redirect(url_for('manage_events'))
+
+    events = Event.query.all()
+    return render_template("events.html", events=events, min_date=min_date, error=error)
+
+@app.route('/events/delete/<int:event_id>', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    if not current_user.is_admin():
+        return abort(403)
+
+    event = Event.query.get_or_404(event_id)
+    db.session.delete(event)
+    db.session.commit()
+    return redirect(url_for('manage_events'))
+
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
 

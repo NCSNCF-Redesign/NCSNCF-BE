@@ -1,0 +1,108 @@
+{% extends "layouts/base.html" %}
+{% set project = "Events" %}
+
+{% block body %}
+<div class="container mt-4">
+  <h2>Create New Event</h2>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('manage_events') }}" class="mb-5">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Event Title</label>
+        <input type="text" name="title" placeholder="e.g., Jazz Night" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Date</label>
+        <input type="date" name="date" min="{{ min_date }}" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Location</label>
+        <input type="text" name="location" placeholder="e.g., Concert Hall" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Category</label>
+        <input type="text" name="category" placeholder="e.g., Concerts, Workshops" class="form-control" required>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <textarea name="description" rows="2" placeholder="Event details, accessibility notes, or schedule..." class="form-control"></textarea>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Add Event</button>
+  </form>
+
+  <h3>Current Events</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Date</th>
+        <th>Location</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.title }}</td>
+        <td>{{ event.date }}</td>
+        <td>{{ event.location }}</td>
+        <td>{{ event.category }}</td>
+        <td>
+            {% if event.description and event.description|length > 60 %}
+                {{ event.description[:60] }}...
+                <button type="button"
+                        class="btn btn-link btn-sm p-0 ms-1"
+                        data-bs-toggle="modal"
+                        data-bs-target="#descriptionModal"
+                        data-title="{{ event.title }}"
+                        data-description="{{ event.description }}">
+                Read more
+                </button>
+            {% else %}
+                {{ event.description }}
+            {% endif %}
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<!-- Full Description Popup Modal -->
+<div class="modal fade" id="descriptionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="descriptionModalTitle" style="overflow-wrap: break-word; word-break: break-word;">Event Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="descriptionModalBody" style="white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const descriptionModal = document.getElementById('descriptionModal');
+  if (descriptionModal) {
+    descriptionModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      document.getElementById('descriptionModalTitle').textContent = button.getAttribute('data-title');
+      document.getElementById('descriptionModalBody').textContent = button.getAttribute('data-description');
+    });
+  }
+</script>
+{% endblock %}
