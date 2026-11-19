@@ -37,13 +37,13 @@ class ResourcesListAPI(Resource):
         if not (current_user and current_user.is_admin()):
             return {'message': 'Admin privilege required'}, 403
 
-        body = request.get_json() or {}
-        category_name = body.get('category', '').strip()
-        title = body.get('title', '').strip()
-        url = body.get('url', '').strip()
-        description = body.get('description', '').strip()
-        phone = body.get('phone', '').strip()
-        email = body.get('email', '').strip()
+        body = request.get_json(silent=True) or {}
+        category_name = (body.get('category') or '').strip()
+        title = (body.get('title') or '').strip()
+        url = (body.get('url') or '').strip()
+        description = (body.get('description') or '').strip()
+        phone = (body.get('phone') or '').strip()
+        email = (body.get('email') or '').strip()
 
         if not category_name or not title:
             return {'message': 'category and title are required'}, 400
@@ -84,29 +84,36 @@ class ResourcesListAPI(Resource):
         if not (current_user and current_user.is_admin()):
             return {'message': 'Admin privilege required'}, 403
 
-        body = request.get_json() or {}
-        category_name = body.get('category', '').strip()
-        title = body.get('title', '').strip()
+        body = request.get_json(silent=True) or {}
+        raw_category = body.get('category')
+        raw_title = body.get('title')
+
+        category_name = raw_category.strip() if isinstance(raw_category, str) else ''
+        title = raw_title.strip() if isinstance(raw_title, str) else ''
 
         if not category_name:
             return {'message': 'category is required'}, 400
 
         data = load_resources()
         found = False
-        for cat in data:
-            if cat.get('category', '').lower() == category_name.lower():
-                if title:
+        if title:
+            # Delete individual item inside a category
+            for cat in data:
+                if cat.get('category', '').lower() == category_name.lower():
                     orig_len = len(cat.get('items', []))
                     cat['items'] = [it for it in cat.get('items', []) if it.get('title', '').lower() != title.lower()]
                     if len(cat['items']) < orig_len:
                         found = True
-                else:
-                    data = [c for c in data if c.get('category', '').lower() != category_name.lower()]
-                    found = True
                     break
+        else:
+            # Delete the entire category
+            orig_len = len(data)
+            data = [c for c in data if c.get('category', '').lower() != category_name.lower()]
+            if len(data) < orig_len:
+                found = True
 
         if not found:
-            return {'message': 'Resource not found'}, 404
+            return {'message': 'Resource or category not found'}, 404
 
         save_resources(data)
         return jsonify({'message': 'Resource removed successfully', 'resources': data})
