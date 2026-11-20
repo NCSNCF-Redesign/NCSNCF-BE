@@ -76,6 +76,19 @@
           {% endif %}
         </td>
         <td>
+          <button type="button"
+                  class="btn btn-warning btn-sm me-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editEventModal"
+                  data-action="{{ url_for('edit_event', event_id=event.id) }}"
+                  data-title="{{ event.title }}"
+                  data-date="{{ event.date }}"
+                  data-time="{{ event.time }}"
+                  data-location="{{ event.location }}"
+                  data-category="{{ event.category }}"
+                  data-description="{{ event.description or '' }}">
+            Edit
+          </button>
           <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" style="display:inline;">
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
@@ -102,6 +115,52 @@
   </div>
 </div>
 
+<!-- Edit Event Modal -->
+<div class="modal fade" id="editEventModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="editEventForm" method="POST">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label">Event Title</label>
+              <input type="text" name="title" id="editEventTitle" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date</label>
+              <input type="date" name="date" id="editEventDate" min="{{ min_date }}" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Time</label>
+              <input type="time" name="time" id="editEventTime" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Location</label>
+              <input type="text" name="location" id="editEventLocation" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category</label>
+              <input type="text" name="category" id="editEventCategory" class="form-control" required>
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Description</label>
+              <textarea name="description" id="editEventDescription" rows="3" class="form-control"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
   const descriptionModal = document.getElementById('descriptionModal');
   if (descriptionModal) {
@@ -109,6 +168,32 @@
       const button = event.relatedTarget;
       document.getElementById('descriptionModalTitle').textContent = button.getAttribute('data-title');
       document.getElementById('descriptionModalBody').textContent = button.getAttribute('data-description');
+    });
+  }
+
+  function to24HourTime(timeStr) {
+    if (!timeStr) return "";
+    const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return timeStr;
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const period = match[3].toUpperCase();
+    if (period === "PM" && hours !== 12) hours += 12;
+    if (period === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const editEventModal = document.getElementById('editEventModal');
+  if (editEventModal) {
+    editEventModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      document.getElementById('editEventForm').action = button.getAttribute('data-action');
+      document.getElementById('editEventTitle').value = button.getAttribute('data-title');
+      document.getElementById('editEventDate').value = button.getAttribute('data-date');
+      document.getElementById('editEventTime').value = to24HourTime(button.getAttribute('data-time'));
+      document.getElementById('editEventLocation').value = button.getAttribute('data-location');
+      document.getElementById('editEventCategory').value = button.getAttribute('data-category');
+      document.getElementById('editEventDescription').value = button.getAttribute('data-description');
     });
   }
 </script>

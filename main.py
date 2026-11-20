@@ -307,6 +307,46 @@ def manage_events():
     events = Event.query.all()
     return render_template("events.html", events=events, min_date=min_date, error=error)
 
+@app.route('/events/edit/<int:event_id>', methods=['POST'])
+@login_required
+def edit_event(event_id):
+    if not current_user.is_admin():
+        return abort(403)
+
+    event = Event.query.get_or_404(event_id)
+    min_date = (date.today() + timedelta(days=1)).isoformat()
+    event_date = request.form.get('date')
+    raw_time = request.form.get('time', '')
+
+    if event_date and event_date < min_date:
+        events = Event.query.all()
+        return render_template(
+            "events.html",
+            events=events,
+            min_date=min_date,
+            error="Event date must be in the future."
+        )
+
+    if event_date:
+        event.date = event_date
+
+    if raw_time:
+        # Handle both 24-hour ("14:30") and already-formatted ("2:30 PM") inputs
+        try:
+            event.time = datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            event.time = raw_time
+    else:
+        event.time = ""
+
+    event.title = request.form.get('title', event.title)
+    event.location = request.form.get('location', event.location)
+    event.category = request.form.get('category', event.category)
+    event.description = request.form.get('description', '')
+
+    db.session.commit()
+    return redirect(url_for('manage_events'))
+
 @app.route('/events/delete/<int:event_id>', methods=['POST'])
 @login_required
 def delete_event(event_id):
