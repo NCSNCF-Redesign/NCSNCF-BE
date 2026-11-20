@@ -62,7 +62,7 @@ from model.calendar import Event
 # server only Views
 
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -283,12 +283,19 @@ def manage_events():
 
     if request.method == 'POST':
         event_date = request.form.get('date')
+        raw_time = request.form.get('time', '')
+
         if not event_date or event_date < min_date:
             error = "Event date must be in the future."
         else:
+            formatted_time = (
+                datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
+                if raw_time else ""
+            )
             new_event = Event(
                 title=request.form.get('title'),
                 date=event_date,
+                time=formatted_time,
                 location=request.form.get('location'),
                 category=request.form.get('category'),
                 description=request.form.get('description', '')

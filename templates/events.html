@@ -11,7 +11,7 @@
 
   <form method="POST" action="{{ url_for('manage_events') }}" class="mb-5">
     <div class="row g-3">
-      <div class="col-md-3">
+      <div class="col-md-4">
         <label class="form-label">Event Title</label>
         <input type="text" name="title" placeholder="e.g., Jazz Night" class="form-control" required>
       </div>
@@ -19,15 +19,19 @@
         <label class="form-label">Date</label>
         <input type="date" name="date" min="{{ min_date }}" class="form-control" required>
       </div>
+      <div class="col-md-2">
+        <label class="form-label">Time</label>
+        <input type="time" name="time" class="form-control" required>
+      </div>
       <div class="col-md-3">
         <label class="form-label">Location</label>
         <input type="text" name="location" placeholder="e.g., Concert Hall" class="form-control" required>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <label class="form-label">Category</label>
         <input type="text" name="category" placeholder="e.g., Concerts, Workshops" class="form-control" required>
       </div>
-      <div class="col-12">
+      <div class="col-md-8">
         <label class="form-label">Description</label>
         <textarea name="description" rows="2" placeholder="Event details, accessibility notes, or schedule..." class="form-control"></textarea>
       </div>
@@ -41,6 +45,7 @@
       <tr>
         <th>Title</th>
         <th>Date</th>
+        <th>Time</th>
         <th>Location</th>
         <th>Category</th>
         <th>Description</th>
@@ -52,22 +57,23 @@
       <tr>
         <td>{{ event.title }}</td>
         <td>{{ event.date }}</td>
+        <td>{{ event.time }}</td>
         <td>{{ event.location }}</td>
         <td>{{ event.category }}</td>
         <td>
-            {% if event.description and event.description|length > 60 %}
-                {{ event.description[:60] }}...
-                <button type="button"
-                        class="btn btn-link btn-sm p-0 ms-1"
-                        data-bs-toggle="modal"
-                        data-bs-target="#descriptionModal"
-                        data-title="{{ event.title }}"
-                        data-description="{{ event.description }}">
-                Read more
-                </button>
-            {% else %}
-                {{ event.description }}
-            {% endif %}
+          {% if event.description and event.description|length > 60 %}
+            {{ event.description[:60] }}...
+            <button type="button"
+                    class="btn btn-link btn-sm p-0 ms-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#descriptionModal"
+                    data-title="{{ event.title }}"
+                    data-description="{{ event.description }}">
+              Read more
+            </button>
+          {% else %}
+            {{ event.description }}
+          {% endif %}
         </td>
         <td>
           <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" style="display:inline;">
@@ -79,6 +85,7 @@
     </tbody>
   </table>
 </div>
+
 <!-- Full Description Popup Modal -->
 <div class="modal fade" id="descriptionModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
