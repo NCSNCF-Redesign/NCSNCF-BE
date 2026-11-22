@@ -179,6 +179,8 @@ class User(db.Model, UserMixin):
     _class = db.Column(db.JSON, unique=False, nullable=True)
     _school = db.Column(db.String(255), default="Unknown", nullable=True)
     _game_profile = db.Column(db.JSON, unique=False, nullable=True)
+    # Account-wide website preferences (theme, language, accessibility).
+    _preferences = db.Column(db.JSON, nullable=True)
     # Bumped every time the password actually changes (set_password). Embedded in issued
     # JWTs and in the Flask-Login session id (see get_id) and checked on every request, so
     # a stolen JWT or session cookie stops working the moment this account's password is
@@ -206,7 +208,7 @@ class User(db.Model, UserMixin):
     personas = db.relationship('Persona', secondary='user_personas', lazy='subquery',
                                overlaps="user_personas_rel,persona,users")
     
-    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None, game_profile=None):
+    def __init__(self, name, uid, password=app.config["DEFAULT_PASSWORD"], role="User", pfp='', grade_data=None, ap_exam=None, school="Unknown", sid=None, classes=None, game_profile=None, preferences=None):
         self._name = name
         self._uid = uid
         self._email = "?"
@@ -221,6 +223,7 @@ class User(db.Model, UserMixin):
         self._class = classes if classes is not None else []
         self._school = school
         self._game_profile = game_profile if game_profile else None
+        self._preferences = preferences if preferences is not None else {}
 
     # UserMixin/Flask-Login requires a get_id method to return the id as a string.
     # Composite id (id:token_version) so load_user (main.py) can reject a session cookie
@@ -487,6 +490,16 @@ class User(db.Model, UserMixin):
         self._school = school
 
     @property
+    def preferences(self):
+        return self._preferences if isinstance(self._preferences, dict) else {}
+
+    @preferences.setter
+    def preferences(self, preferences):
+        if not isinstance(preferences, dict):
+            raise ValueError("Preferences must be a JSON object")
+        self._preferences = preferences
+
+    @property
     def game_profile(self):
         return self._game_profile
 
@@ -608,6 +621,7 @@ class User(db.Model, UserMixin):
             "password": self._password,  # Only for internal use, not for API
             "school": self.school,
             "game_profile": self.game_profile,
+            "preferences": self.preferences,
             "active": self.active,
             "last_verified": self.last_verified.isoformat() if self.last_verified else None,
             "verification_state": self.verification_state,

@@ -692,6 +692,41 @@ class _Class(Resource):
         user.update({'class': classes})
         return jsonify({'uid': user.uid, 'class': user._class})
 
+class _Preferences(Resource):
+    """Read or replace the authenticated user's website preferences."""
+
+    @token_required()
+    def get(self):
+        user = g.current_user
+        return jsonify({'preferences': user.preferences})
+
+    @token_required()
+    def put(self):
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict) or not isinstance(body.get('preferences'), dict):
+            return {'message': 'Expected a JSON object with a preferences object'}, 400
+
+        preferences = body['preferences']
+        # Keep storage bounded; reject nonstandard values such as NaN.
+        import json
+        try:
+            encoded = json.dumps(preferences, allow_nan=False)
+        except (TypeError, ValueError):
+            return {'message': 'Preferences must contain valid JSON values'}, 400
+        if len(encoded.encode('utf-8')) > 32768:
+            return {'message': 'Preferences exceed the 32 KB limit'}, 413
+
+        user = g.current_user
+        user.preferences = preferences
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('Could not save user preferences')
+            return {'message': 'Could not save preferences'}, 500
+        return jsonify({'preferences': user.preferences})
+
+
 # building RESTapi endpoint
 api.add_resource(_ID, '/id')
 api.add_resource(_BULK, '/users')
@@ -709,3 +744,4 @@ api.add_resource(_ChangeRole, '/user/<string:uid>/role')
 api.add_resource(_Reverify, '/user/reverify')
 api.add_resource(_AdminCreate, '/user/admin-create')
 api.add_resource(_Class, '/user/class')
+api.add_resource(_Preferences, '/user/preferences')
