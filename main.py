@@ -61,6 +61,7 @@ from model.calendar import Event
 
 # server only Views
 
+import calendar
 import os
 from datetime import date, datetime, timedelta
 
@@ -272,6 +273,42 @@ def update_user(uid):
 def survey_results():
     return render_template("survey_results.html")
 
+def generate_event_dates(start_str, repeat="none", until_str=None, max_events=52):
+    start_date = datetime.strptime(start_str, "%Y-%m-%d").date()
+    if repeat == "none":
+        return [start_date]
+
+    if not until_str:
+        raise ValueError("Please select a Repeat Until date for recurring events.")
+
+    end_date = datetime.strptime(until_str, "%Y-%m-%d").date()
+    if end_date < start_date:
+        raise ValueError("Repeat Until date must be on or after the event start date.")
+
+    dates = []
+    current = start_date
+    step = 1
+
+    while current <= end_date and len(dates) < max_events:
+        dates.append(current)
+        if repeat == "daily":
+            current += timedelta(days=1)
+        elif repeat == "weekly":
+            current += timedelta(weeks=1)
+        elif repeat == "biweekly":
+            current += timedelta(weeks=2)
+        elif repeat == "monthly":
+            month = start_date.month - 1 + step
+            year = start_date.year + month // 12
+            month = month % 12 + 1
+            day = min(start_date.day, calendar.monthrange(year, month)[1])
+            current = start_date.replace(year=year, month=month, day=day)
+            step += 1
+        else:
+            break
+
+    return dates
+
 @app.route('/events', methods=['GET', 'POST'])
 @login_required
 def manage_events():
@@ -282,29 +319,43 @@ def manage_events():
     error = None
 
     if request.method == 'POST':
-        event_date = request.form.get('date')
-        raw_time = request.form.get('time', '')
+        title = request.form.get('title', '').strip()
+        event_date = request.form.get('date', '').strip()
+        raw_time = request.form.get('time', '').strip()
+        location = request.form.get('location', '').strip()
+        category = request.form.get('category', '').strip()
+        description = request.form.get('description', '').strip()
+        repeat = request.form.get('repeat', 'none').strip()
+        repeat_until = request.form.get('repeat_until', '').strip()
 
         if not event_date or event_date < min_date:
             error = "Event date must be in the future."
         else:
-            formatted_time = (
-                datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
-                if raw_time else ""
-            )
-            new_event = Event(
-                title=request.form.get('title'),
-                date=event_date,
-                time=formatted_time,
-                location=request.form.get('location'),
-                category=request.form.get('category'),
-                description=request.form.get('description', '')
-            )
-            db.session.add(new_event)
-            db.session.commit()
-            return redirect(url_for('manage_events'))
+            try:
+                formatted_time = (
+                    datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
+                    if raw_time else ""
+                )
+                event_dates = generate_event_dates(event_date, repeat, repeat_until)
 
-    events = Event.query.all()
+                for occurrence_date in event_dates:
+                    new_event = Event(
+                        title=title,
+                        date=occurrence_date.strftime("%Y-%m-%d"),
+                        time=formatted_time,
+                        location=location,
+                        category=category,
+                        description=description
+                    )
+                    db.session.add(new_event)
+
+                db.session.commit()
+                return redirect(url_for('manage_events'))
+            except ValueError as e:
+                db.session.rollback()
+                error = str(e)
+
+    events = Event.query.order_by(Event.date.asc(), Event.time.asc()).all()
     return render_template("events.html", events=events, min_date=min_date, error=error)
 
 @app.route('/events/edit/<int:event_id>', methods=['POST'])
@@ -319,7 +370,7 @@ def edit_event(event_id):
     raw_time = request.form.get('time', '')
 
     if event_date and event_date < min_date:
-        events = Event.query.all()
+        events = Event.query.order_by(Event.date.asc(), Event.time.asc()).all()
         return render_template(
             "events.html",
             events=events,
