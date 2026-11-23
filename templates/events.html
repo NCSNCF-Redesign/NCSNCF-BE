@@ -16,19 +16,10 @@
           <label class="form-label fw-semibold">Event Title</label>
           <input type="text" name="title" placeholder="e.g., Sunday Soccer" class="form-control" required>
         </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Date</label>
-          <input type="date" name="date" id="eventStartDate" min="{{ min_date }}" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label fw-semibold">Time</label>
-          <input type="time" name="time" class="form-control" required>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label class="form-label fw-semibold">Location</label>
           <input type="text" name="location" placeholder="e.g., Main Field or Zoom" class="form-control" required>
         </div>
-
         <div class="col-md-4">
           <label class="form-label fw-semibold">Category</label>
           <select name="category" class="form-select" required>
@@ -40,7 +31,25 @@
           </select>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Start Date</label>
+          <input type="date" name="date" id="eventStartDate" min="{{ min_date }}" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">End Date <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="date" name="end_date" id="eventEndDate" min="{{ min_date }}" class="form-control">
+          <div class="form-text">Leave blank for single-day events</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Start Time <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="time" name="time" id="eventStartTime" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">End Time <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="time" name="end_time" id="eventEndTime" class="form-control">
+        </div>
+
+        <div class="col-md-6">
           <label class="form-label fw-semibold">Format</label>
           <select name="format" class="form-select" required>
             <option value="In-person" selected>In-person</option>
@@ -49,7 +58,7 @@
           </select>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-6">
           <label class="form-label fw-semibold">Cost / RSVP</label>
           <input type="text" name="cost_rsvp" placeholder="e.g., Free, $10 at door, or RSVP link" class="form-control">
         </div>
@@ -101,8 +110,16 @@
           {% for event in events %}
           <tr>
             <td>{{ event.title }}</td>
-            <td>{{ event.date }}</td>
-            <td>{{ event.time }}</td>
+            <td>
+              {{ event.date }}{% if event.end_date and event.end_date != event.date %} – {{ event.end_date }}{% endif %}
+            </td>
+            <td>
+              {% if event.time or event.end_time %}
+                {{ event.time or '' }}{% if event.time and event.end_time %} – {% endif %}{{ event.end_time or '' }}
+              {% else %}
+                All day
+              {% endif %}
+            </td>
             <td>{{ event.format or 'In-person' }}</td>
             <td>{{ event.location }}</td>
             <td>{{ event.category }}</td>
@@ -119,7 +136,7 @@
                   Read more
                 </button>
               {% else %}
-                {{ event.description }}
+                {{ event.description or '' }}
               {% endif %}
             </td>
             <td>
@@ -130,7 +147,9 @@
                       data-action="{{ url_for('edit_event', event_id=event.id) }}"
                       data-title="{{ event.title }}"
                       data-date="{{ event.date }}"
-                      data-time="{{ event.time }}"
+                      data-end-date="{{ event.end_date or '' }}"
+                      data-time="{{ event.time or '' }}"
+                      data-end-time="{{ event.end_time or '' }}"
                       data-format="{{ event.format or 'In-person' }}"
                       data-location="{{ event.location }}"
                       data-category="{{ event.category }}"
@@ -182,12 +201,20 @@
               <input type="text" name="title" id="editEventTitle" class="form-control" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Date</label>
+              <label class="form-label">Start Date</label>
               <input type="date" name="date" id="editEventDate" min="{{ min_date }}" class="form-control" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Time</label>
-              <input type="time" name="time" id="editEventTime" class="form-control" required>
+              <label class="form-label">End Date <span class="text-muted fw-normal">(optional)</span></label>
+              <input type="date" name="end_date" id="editEventEndDate" min="{{ min_date }}" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Start Time <span class="text-muted fw-normal">(optional)</span></label>
+              <input type="time" name="time" id="editEventTime" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">End Time <span class="text-muted fw-normal">(optional)</span></label>
+              <input type="time" name="end_time" id="editEventEndTime" class="form-control">
             </div>
             <div class="col-md-6">
               <label class="form-label">Format</label>
@@ -240,7 +267,7 @@
   }
 
   function to24HourTime(timeStr) {
-    if (!timeStr) return "";
+    if (!timeStr || timeStr === "None") return "";
     const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
     if (!match) return timeStr;
     let hours = parseInt(match[1], 10);
@@ -252,13 +279,22 @@
   }
 
   const editEventModal = document.getElementById('editEventModal');
+  const editStartDateInput = document.getElementById('editEventDate');
+  const editEndDateInput = document.getElementById('editEventEndDate');
+
   if (editEventModal) {
     editEventModal.addEventListener('show.bs.modal', function (event) {
       const button = event.relatedTarget;
+      const startDateVal = button.getAttribute('data-date') || '';
+      const endDateVal = button.getAttribute('data-end-date') || '';
+
       document.getElementById('editEventForm').action = button.getAttribute('data-action');
       document.getElementById('editEventTitle').value = button.getAttribute('data-title');
-      document.getElementById('editEventDate').value = button.getAttribute('data-date');
+      editStartDateInput.value = startDateVal;
+      editEndDateInput.min = startDateVal || '{{ min_date }}';
+      editEndDateInput.value = endDateVal;
       document.getElementById('editEventTime').value = to24HourTime(button.getAttribute('data-time'));
+      document.getElementById('editEventEndTime').value = to24HourTime(button.getAttribute('data-end-time'));
       document.getElementById('editEventLocation').value = button.getAttribute('data-location');
       document.getElementById('editEventCostRsvp').value = button.getAttribute('data-cost-rsvp') || '';
 
@@ -280,8 +316,20 @@
     });
   }
 
+  if (editStartDateInput && editEndDateInput) {
+    editStartDateInput.addEventListener('change', function () {
+      if (editStartDateInput.value) {
+        editEndDateInput.min = editStartDateInput.value;
+        if (editEndDateInput.value && editEndDateInput.value < editStartDateInput.value) {
+          editEndDateInput.value = '';
+        }
+      }
+    });
+  }
+
   // Periodic event controls & live preview
   const startDateInput = document.getElementById('eventStartDate');
+  const endDateInput = document.getElementById('eventEndDate');
   const repeatSelect = document.getElementById('eventRepeat');
   const repeatUntilInput = document.getElementById('eventRepeatUntil');
   const repeatPreview = document.getElementById('repeatPreview');
@@ -294,6 +342,11 @@
     repeatUntilInput.required = isRecurring;
 
     if (startDateInput.value) {
+      endDateInput.min = startDateInput.value;
+      if (endDateInput.value && endDateInput.value < startDateInput.value) {
+        endDateInput.value = '';
+      }
+
       repeatUntilInput.min = startDateInput.value;
       if (repeatUntilInput.value && repeatUntilInput.value < startDateInput.value) {
         repeatUntilInput.value = startDateInput.value;

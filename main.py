@@ -309,6 +309,15 @@ def generate_event_dates(start_str, repeat="none", until_str=None, max_events=52
 
     return dates
 
+def format_optional_time(raw_time):
+    cleaned = (raw_time or "").strip()
+    if not cleaned:
+        return None
+    try:
+        return datetime.strptime(cleaned, "%H:%M").strftime("%I:%M %p").lstrip("0")
+    except ValueError:
+        return cleaned
+
 @app.route('/events', methods=['GET', 'POST'])
 @login_required
 def manage_events():
@@ -321,7 +330,9 @@ def manage_events():
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         event_date = request.form.get('date', '').strip()
+        raw_end_date = request.form.get('end_date', '').strip()
         raw_time = request.form.get('time', '').strip()
+        raw_end_time = request.form.get('end_time', '').strip()
         location = request.form.get('location', '').strip()
         category = request.form.get('category', '').strip()
         event_format = request.form.get('format', 'In-person').strip()
@@ -332,19 +343,31 @@ def manage_events():
 
         if not event_date or event_date < min_date:
             error = "Event date must be in the future."
+        elif raw_end_date and raw_end_date < event_date:
+            error = "End date must be on or after the event start date."
         else:
             try:
-                formatted_time = (
-                    datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
-                    if raw_time else ""
-                )
+                formatted_time = format_optional_time(raw_time)
+                formatted_end_time = format_optional_time(raw_end_time)
                 event_dates = generate_event_dates(event_date, repeat, repeat_until)
 
+                duration = None
+                if raw_end_date:
+                    start_dt = datetime.strptime(event_date, "%Y-%m-%d").date()
+                    end_dt = datetime.strptime(raw_end_date, "%Y-%m-%d").date()
+                    duration = end_dt - start_dt
+
                 for occurrence_date in event_dates:
+                    occ_end_date = (
+                        (occurrence_date + duration).strftime("%Y-%m-%d")
+                        if duration is not None else None
+                    )
                     new_event = Event(
                         title=title,
                         date=occurrence_date.strftime("%Y-%m-%d"),
+                        end_date=occ_end_date,
                         time=formatted_time,
+                        end_time=formatted_end_time,
                         location=location,
                         category=category,
                         format=event_format,
@@ -370,8 +393,12 @@ def edit_event(event_id):
 
     event = Event.query.get_or_404(event_id)
     min_date = (date.today() + timedelta(days=1)).isoformat()
-    event_date = request.form.get('date')
-    raw_time = request.form.get('time', '')
+    event_date = request.form.get('date', '').strip()
+    raw_end_date = request.form.get('end_date', '').strip()
+    raw_time = request.form.get('time', '').strip()
+    raw_end_time = request.form.get('end_time', '').strip()
+
+    effective_start_date = event_date or event.date
 
     if event_date and event_date < min_date:
         events = Event.query.order_by(Event.date.asc(), Event.time.asc()).all()
@@ -382,17 +409,21 @@ def edit_event(event_id):
             error="Event date must be in the future."
         )
 
+    if raw_end_date and raw_end_date < effective_start_date:
+        events = Event.query.order_by(Event.date.asc(), Event.time.asc()).all()
+        return render_template(
+            "events.html",
+            events=events,
+            min_date=min_date,
+            error="End date must be on or after the event start date."
+        )
+
     if event_date:
         event.date = event_date
 
-    if raw_time:
-        # Handle both 24-hour ("14:30") and already-formatted ("2:30 PM") inputs
-        try:
-            event.time = datetime.strptime(raw_time, "%H:%M").strftime("%I:%M %p").lstrip("0")
-        except ValueError:
-            event.time = raw_time
-    else:
-        event.time = ""
+    event.end_date = raw_end_date or None
+    event.time = format_optional_time(raw_time)
+    event.end_time = format_optional_time(raw_end_time)
 
     event.title = request.form.get('title', event.title)
     event.location = request.form.get('location', event.location)
