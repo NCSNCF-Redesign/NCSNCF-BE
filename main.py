@@ -324,6 +324,8 @@ def manage_events():
         raw_time = request.form.get('time', '').strip()
         location = request.form.get('location', '').strip()
         category = request.form.get('category', '').strip()
+        event_format = request.form.get('format', 'In-person').strip()
+        cost_rsvp = request.form.get('cost_rsvp', '').strip()
         description = request.form.get('description', '').strip()
         repeat = request.form.get('repeat', 'none').strip()
         repeat_until = request.form.get('repeat_until', '').strip()
@@ -345,6 +347,8 @@ def manage_events():
                         time=formatted_time,
                         location=location,
                         category=category,
+                        format=event_format,
+                        cost_rsvp=cost_rsvp,
                         description=description
                     )
                     db.session.add(new_event)
@@ -393,6 +397,8 @@ def edit_event(event_id):
     event.title = request.form.get('title', event.title)
     event.location = request.form.get('location', event.location)
     event.category = request.form.get('category', event.category)
+    event.format = request.form.get('format', event.format)
+    event.cost_rsvp = request.form.get('cost_rsvp', '').strip()
     event.description = request.form.get('description', '')
 
     db.session.commit()

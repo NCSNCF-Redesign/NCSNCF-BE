@@ -26,7 +26,7 @@
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Location</label>
-          <input type="text" name="location" placeholder="e.g., Main Field" class="form-control" required>
+          <input type="text" name="location" placeholder="e.g., Main Field or Zoom" class="form-control" required>
         </div>
 
         <div class="col-md-4">
@@ -41,6 +41,20 @@
         </div>
 
         <div class="col-md-4">
+          <label class="form-label fw-semibold">Format</label>
+          <select name="format" class="form-select" required>
+            <option value="In-person" selected>In-person</option>
+            <option value="Hybrid (In-person & Zoom)">Hybrid (In-person &amp; Zoom)</option>
+            <option value="Online (Zoom)">Online (Zoom)</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cost / RSVP</label>
+          <input type="text" name="cost_rsvp" placeholder="e.g., Free, $10 at door, or RSVP link" class="form-control">
+        </div>
+
+        <div class="col-md-6">
           <label class="form-label fw-semibold">Repeat</label>
           <select name="repeat" id="eventRepeat" class="form-select">
             <option value="none" selected>Does not repeat</option>
@@ -51,7 +65,7 @@
           </select>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-6">
           <label class="form-label fw-semibold">Repeat Until</label>
           <input type="date" name="repeat_until" id="eventRepeatUntil" min="{{ min_date }}" class="form-control" disabled>
           <div class="form-text" id="repeatPreview">One-time event</div>
@@ -75,8 +89,10 @@
             <th>Title</th>
             <th>Date</th>
             <th>Time</th>
+            <th>Format</th>
             <th>Location</th>
             <th>Category</th>
+            <th>Cost / RSVP</th>
             <th>Description</th>
             <th>Action</th>
           </tr>
@@ -87,8 +103,10 @@
             <td>{{ event.title }}</td>
             <td>{{ event.date }}</td>
             <td>{{ event.time }}</td>
+            <td>{{ event.format or 'In-person' }}</td>
             <td>{{ event.location }}</td>
             <td>{{ event.category }}</td>
+            <td>{{ event.cost_rsvp or '—' }}</td>
             <td>
               {% if event.description and event.description|length > 60 %}
                 {{ event.description[:60] }}...
@@ -113,8 +131,10 @@
                       data-title="{{ event.title }}"
                       data-date="{{ event.date }}"
                       data-time="{{ event.time }}"
+                      data-format="{{ event.format or 'In-person' }}"
                       data-location="{{ event.location }}"
                       data-category="{{ event.category }}"
+                      data-cost-rsvp="{{ event.cost_rsvp or '' }}"
                       data-description="{{ event.description or '' }}">
                 Edit
               </button>
@@ -170,6 +190,14 @@
               <input type="time" name="time" id="editEventTime" class="form-control" required>
             </div>
             <div class="col-md-6">
+              <label class="form-label">Format</label>
+              <select name="format" id="editEventFormat" class="form-select" required>
+                <option value="In-person">In-person</option>
+                <option value="Hybrid (In-person & Zoom)">Hybrid (In-person &amp; Zoom)</option>
+                <option value="Online (Zoom)">Online (Zoom)</option>
+              </select>
+            </div>
+            <div class="col-md-6">
               <label class="form-label">Location</label>
               <input type="text" name="location" id="editEventLocation" class="form-control" required>
             </div>
@@ -181,6 +209,10 @@
                 <option value="Social">Social</option>
                 <option value="Education">Education</option>
               </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Cost / RSVP</label>
+              <input type="text" name="cost_rsvp" id="editEventCostRsvp" placeholder="e.g., Free or RSVP link" class="form-control">
             </div>
             <div class="col-md-12">
               <label class="form-label">Description</label>
@@ -228,6 +260,14 @@
       document.getElementById('editEventDate').value = button.getAttribute('data-date');
       document.getElementById('editEventTime').value = to24HourTime(button.getAttribute('data-time'));
       document.getElementById('editEventLocation').value = button.getAttribute('data-location');
+      document.getElementById('editEventCostRsvp').value = button.getAttribute('data-cost-rsvp') || '';
+
+      const formatSelect = document.getElementById('editEventFormat');
+      const currentFormat = button.getAttribute('data-format') || 'In-person';
+      if (![...formatSelect.options].some(o => o.value === currentFormat)) {
+        formatSelect.add(new Option(currentFormat, currentFormat));
+      }
+      formatSelect.value = currentFormat;
 
       const categorySelect = document.getElementById('editEventCategory');
       const currentCategory = button.getAttribute('data-category');
