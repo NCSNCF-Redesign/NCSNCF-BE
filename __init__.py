@@ -25,6 +25,11 @@ app.config['JSON_AS_ASCII'] = False  # Allow emojis, non-ASCII characters in JSO
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+
+# Setup of key Flask object (app) with explicit writable instance path
+basedir = os.path.abspath(os.path.dirname(__file__))
+app = Flask(__name__, instance_path=os.path.join(basedir, 'instance'))
+
 # Allowed servers for cross-origin resource sharing (CORS)
 allowed_origins = [
     'http://localhost:4500',
