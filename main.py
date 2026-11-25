@@ -102,7 +102,43 @@ app.register_blueprint(presence_api)  # Register the generic presence event API
 app.register_blueprint(calendar_api)
 app.register_blueprint(resources_api)
 
-# Jokes file initialization
+# Database Models for Storing Editable Page Content & Milestones (Defined before db.create_all())
+class PageContent(db.Model):
+    __tablename__ = 'page_content'
+    id = db.Column(db.Integer, primary_key=True)
+    page_key = db.Column(db.String(50), unique=True, nullable=False) # e.g., 'home'
+    hero_title = db.Column(db.String(200), nullable=True)
+    org_subtitle = db.Column(db.String(200), nullable=True)
+    hero_desc = db.Column(db.Text, nullable=True)
+
+    def read(self):
+        return {
+            "page_key": self.page_key,
+            "hero_title": self.hero_title,
+            "org_subtitle": self.org_subtitle,
+            "hero_desc": self.hero_desc
+        }
+
+class Milestone(db.Model):
+    __tablename__ = 'milestones'
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.String(20), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(500), nullable=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    def read(self):
+        return {
+            "id": self.id,
+            "year": self.year,
+            "title": self.title,
+            "description": self.description,
+            "image_url": self.image_url,
+            "display_order": self.display_order
+        }
+
+# Jokes file initialization & Table creation
 with app.app_context():
     db.create_all()
     initJokes()
@@ -117,14 +153,6 @@ def unauthorized_callback():
 # register URIs for server pages
 @login_manager.user_loader
 def load_user(user_id):
-    # user_id is the composite "id:token_version" from User.get_id(). A mismatched
-    # token_version means the session predates a password change on this account --
-    # returning None here tells Flask-Login the session is invalid.
-    #
-    # A session issued before this field existed at all has no ":" -- treat that as
-    # token_version "0" (matching a fresh/unchanged account) instead of invalidating
-    # it outright. It still correctly fails below once the account's real
-    # token_version has moved past 0 from an actual password change.
     if ":" in user_id:
         raw_id, token_version = user_id.split(":", 1)
     else:
@@ -184,15 +212,12 @@ def logout():
 
 @app.errorhandler(404)  # catch for URL not found
 def page_not_found(e):
-    # note that we set the 404 status explicitly
     return render_template('404.html'), 404
 
 @app.route('/')  # connects default URL to index() function
 def index():
     print("Home:", current_user)
     return render_template("index.html")
-
-
 
 @app.route('/users/table2')
 @login_required
@@ -239,33 +264,25 @@ def reset_password(user_id):
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    # Set the new password
     if user.update({"password": app.config['DEFAULT_PASSWORD']}):
         return jsonify({'message': 'Password reset successfully'}), 200
     return jsonify({'error': 'Password reset failed'}), 500
 
 @app.route('/update_user/<string:uid>', methods=['PUT'])
 def update_user(uid):
-    # Authorization check
     if not current_user.is_admin():
         return jsonify({'error': 'Unauthorized'}), 403
 
-    # Get the JSON data from the request
     data = request.get_json()
-    print(f"Request Data: {data}")  # Log the incoming data
+    print(f"Request Data: {data}")
 
-    # Find the user in the database
     user = User.query.filter_by(_uid=uid).first()
     if user:
-        print(f"Found user: {user.uid}")  # Log the found user's UID
-        
-        # Update the user using the provided data
-        user.update(data)  # Assuming `user.update(data)` is a method on your User model
-        
-        # Save changes to the database
+        print(f"Found user: {user.uid}")
+        user.update(data)
         return jsonify({"message": "User updated successfully."}), 200
     else:
-        print("User not found.")  # Log when user is not found
+        print("User not found.")
         return jsonify({"message": "User not found."}), 404
 
 @app.route('/survey_results')
@@ -446,53 +463,12 @@ def delete_event(event_id):
     db.session.commit()
     return redirect(url_for('manage_events'))
 
-# Create an AppGroup for custom commands
-custom_cli = AppGroup('custom', help='Custom commands')
-
-# Database Model for Storing Editable Page Content
-class PageContent(db.Model):
-    __tablename__ = 'page_content'
-    id = db.Column(db.Integer, primary_key=True)
-    page_key = db.Column(db.String(50), unique=True, nullable=False) # e.g., 'home'
-    hero_title = db.Column(db.String(200), nullable=True)
-    org_subtitle = db.Column(db.String(200), nullable=True)
-    hero_desc = db.Column(db.Text, nullable=True)
-
-    def read(self):
-        return {
-            "page_key": self.page_key,
-            "hero_title": self.hero_title,
-            "org_subtitle": self.org_subtitle,
-            "hero_desc": self.hero_desc
-        }
-
-
-class Milestone(db.Model):
-    __tablename__ = 'milestones'
-    id = db.Column(db.Integer, primary_key=True)
-    year = db.Column(db.String(20), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    image_url = db.Column(db.String(500), nullable=True)
-    display_order = db.Column(db.Integer, default=0)
-
-    def read(self):
-        return {
-            "id": self.id,
-            "year": self.year,
-            "title": self.title,
-            "description": self.description,
-            "image_url": self.image_url,
-            "display_order": self.display_order
-        }
-
-# Get all milestones
+# Milestone API Endpoints
 @app.route('/api/milestones', methods=['GET'])
 def get_milestones():
     milestones = Milestone.query.order_by(Milestone.display_order.asc(), Milestone.id.asc()).all()
     return jsonify([m.read() for m in milestones]), 200
 
-# Create a new milestone
 @app.route('/api/milestones', methods=['POST'])
 def create_milestone():
     data = request.get_json() or {}
@@ -511,7 +487,6 @@ def create_milestone():
     db.session.commit()
     return jsonify({"message": "Milestone created successfully", "data": milestone.read()}), 201
 
-# Update an existing milestone
 @app.route('/api/milestones/<int:milestone_id>', methods=['PUT'])
 def update_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
@@ -530,7 +505,6 @@ def update_milestone(milestone_id):
     db.session.commit()
     return jsonify({"message": "Milestone updated successfully", "data": milestone.read()}), 200
 
-# Delete a milestone
 @app.route('/api/milestones/<int:milestone_id>', methods=['DELETE'])
 def delete_milestone(milestone_id):
     milestone = Milestone.query.get_or_404(milestone_id)
@@ -543,7 +517,6 @@ def delete_milestone(milestone_id):
 def get_page_content(page_key):
     content = PageContent.query.filter_by(page_key=page_key).first()
     if not content:
-        # Default fallback content if none saved yet
         return jsonify({
             "hero_title": "Bringing People Together",
             "org_subtitle": "North County Special Needs Community Foundation",
@@ -571,21 +544,21 @@ def save_page_content(page_key):
     db.session.commit()
     return jsonify({"message": "Content saved successfully", "data": content.read()}), 200
 
-# Define a command to run the data generation functions
+# Create an AppGroup for custom commands
+custom_cli = AppGroup('custom', help='Custom commands')
+
 @custom_cli.command('generate_data')
 def generate_data():
     initUsers()
     initMicroblogs()
     initPersonas()
     initPersonaUsers()
-    seed_schedules()  # presence schedules from model/presence_schedules.json
+    seed_schedules()
 
-# Register the custom command group with the Flask application
 app.cli.add_command(custom_cli)
         
-# this runs the flask application on the development server
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = app.config['FLASK_PORT']
-    print(f"** Server running: http://localhost:{port}")  # Pretty link
+    print(f"** Server running: http://localhost:{port}")
     app.run(debug=True, host=host, port=port, use_reloader=False)
