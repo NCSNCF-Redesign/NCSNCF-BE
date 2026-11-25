@@ -449,6 +449,128 @@ def delete_event(event_id):
 # Create an AppGroup for custom commands
 custom_cli = AppGroup('custom', help='Custom commands')
 
+# Database Model for Storing Editable Page Content
+class PageContent(db.Model):
+    __tablename__ = 'page_content'
+    id = db.Column(db.Integer, primary_key=True)
+    page_key = db.Column(db.String(50), unique=True, nullable=False) # e.g., 'home'
+    hero_title = db.Column(db.String(200), nullable=True)
+    org_subtitle = db.Column(db.String(200), nullable=True)
+    hero_desc = db.Column(db.Text, nullable=True)
+
+    def read(self):
+        return {
+            "page_key": self.page_key,
+            "hero_title": self.hero_title,
+            "org_subtitle": self.org_subtitle,
+            "hero_desc": self.hero_desc
+        }
+
+
+class Milestone(db.Model):
+    __tablename__ = 'milestones'
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.String(20), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(500), nullable=True)
+    display_order = db.Column(db.Integer, default=0)
+
+    def read(self):
+        return {
+            "id": self.id,
+            "year": self.year,
+            "title": self.title,
+            "description": self.description,
+            "image_url": self.image_url,
+            "display_order": self.display_order
+        }
+
+# Get all milestones
+@app.route('/api/milestones', methods=['GET'])
+def get_milestones():
+    milestones = Milestone.query.order_by(Milestone.display_order.asc(), Milestone.id.asc()).all()
+    return jsonify([m.read() for m in milestones]), 200
+
+# Create a new milestone
+@app.route('/api/milestones', methods=['POST'])
+def create_milestone():
+    data = request.get_json() or {}
+    img_url = data.get('image_url', '').strip()
+    if not img_url:
+        img_url = None
+
+    milestone = Milestone(
+        year=data.get('year', ''),
+        title=data.get('title', ''),
+        description=data.get('description', ''),
+        image_url=img_url,
+        display_order=data.get('display_order', 0)
+    )
+    db.session.add(milestone)
+    db.session.commit()
+    return jsonify({"message": "Milestone created successfully", "data": milestone.read()}), 201
+
+# Update an existing milestone
+@app.route('/api/milestones/<int:milestone_id>', methods=['PUT'])
+def update_milestone(milestone_id):
+    milestone = Milestone.query.get_or_404(milestone_id)
+    data = request.get_json() or {}
+    
+    milestone.year = data.get('year', milestone.year)
+    milestone.title = data.get('title', milestone.title)
+    milestone.description = data.get('description', milestone.description)
+    
+    if 'image_url' in data:
+        img_url = data.get('image_url', '').strip()
+        milestone.image_url = img_url if img_url else None
+
+    milestone.display_order = data.get('display_order', milestone.display_order)
+    
+    db.session.commit()
+    return jsonify({"message": "Milestone updated successfully", "data": milestone.read()}), 200
+
+# Delete a milestone
+@app.route('/api/milestones/<int:milestone_id>', methods=['DELETE'])
+def delete_milestone(milestone_id):
+    milestone = Milestone.query.get_or_404(milestone_id)
+    db.session.delete(milestone)
+    db.session.commit()
+    return jsonify({"message": "Milestone deleted successfully"}), 200
+
+# API Endpoint to Fetch Home Page Content
+@app.route('/api/page-content/<page_key>', methods=['GET'])
+def get_page_content(page_key):
+    content = PageContent.query.filter_by(page_key=page_key).first()
+    if not content:
+        # Default fallback content if none saved yet
+        return jsonify({
+            "hero_title": "Bringing People Together",
+            "org_subtitle": "North County Special Needs Community Foundation",
+            "hero_desc": "Empowering adults with developmental disabilities in Poway and surrounding communities through heartfelt human connection, social inclusion, lifelong education, and independent housing opportunities."
+        }), 200
+    return jsonify(content.read()), 200
+
+# API Endpoint to Save/Update Home Page Content
+@app.route('/api/page-content/<page_key>', methods=['POST', 'PUT'])
+def save_page_content(page_key):
+    data = request.get_json() or {}
+    content = PageContent.query.filter_by(page_key=page_key).first()
+    
+    if not content:
+        content = PageContent(page_key=page_key)
+        db.session.add(content)
+        
+    if "hero_title" in data:
+        content.hero_title = data["hero_title"]
+    if "org_subtitle" in data:
+        content.org_subtitle = data["org_subtitle"]
+    if "hero_desc" in data:
+        content.hero_desc = data["hero_desc"]
+        
+    db.session.commit()
+    return jsonify({"message": "Content saved successfully", "data": content.read()}), 200
+
 # Define a command to run the data generation functions
 @custom_cli.command('generate_data')
 def generate_data():
