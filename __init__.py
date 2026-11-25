@@ -119,7 +119,8 @@ else:
    db_path = os.path.join(basedir, 'volumes')
    os.makedirs(db_path, exist_ok=True)
    
-   dbURI = 'sqlite:///' + os.path.join(db_path, dbName + '.db')
+   dbString = 'sqlite:///' + os.path.join(db_path, dbName + '.db')
+   dbURI = dbString
    backupURI = 'sqlite:///' + os.path.join(db_path, dbName + '_bak.db')
 
 # Set database configuration in Flask app
