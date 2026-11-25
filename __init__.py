@@ -25,11 +25,6 @@ app.config['JSON_AS_ASCII'] = False  # Allow emojis, non-ASCII characters in JSO
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-
-# Setup of key Flask object (app) with explicit writable instance path
-basedir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__, instance_path=os.path.join(basedir, 'instance'))
-
 # Allowed servers for cross-origin resource sharing (CORS)
 allowed_origins = [
     'http://localhost:4500',
@@ -119,14 +114,10 @@ if DB_ENDPOINT and DB_USERNAME and DB_PASSWORD:
    dbURI = dbString + '/' + dbName
    backupURI = None
 else:
-   # Development - Use SQLite with absolute path
-   basedir = os.path.abspath(os.path.dirname(__file__))
-   db_path = os.path.join(basedir, 'volumes')
-   os.makedirs(db_path, exist_ok=True)
-   
-   dbString = 'sqlite:///' + os.path.join(db_path, dbName + '.db')
-   dbURI = dbString
-   backupURI = 'sqlite:///' + os.path.join(db_path, dbName + '_bak.db')
+   # Development - Use SQLite
+   dbString = 'sqlite:///volumes/'
+   dbURI = dbString + dbName + '.db'
+   backupURI = dbString + dbName + '_bak.db'
 
 # Set database configuration in Flask app
 app.config['DB_ENDPOINT'] = DB_ENDPOINT
