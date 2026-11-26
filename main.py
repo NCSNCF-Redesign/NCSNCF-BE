@@ -37,7 +37,6 @@ from api.rfid_api import rfid_api
 from api.presence_api import presence_api
 #from api.announcement import announcement_api ##temporary revert
 from api.calendar import calendar_api
-from api.subscriptions import subscriptions_api
 from api.resources import resources_api
 from api.survey import survey_api # Import your survey blueprint
 from api.media import media_api
@@ -60,7 +59,6 @@ from model.leaderboard import ScoreCounterEvent, ElementaryLeaderboardEvent
 from hacks.jokes import initJokes 
 from model.calendar import Event
 from model.media import Media
-from model.subscription import Subscription, EventNotification, EventAnnouncement
 # from model.announcement import Announcement ##temporary revert
 
 # server only Views
@@ -104,7 +102,6 @@ app.register_blueprint(rfid_api)  # Register the RFID attendance API
 app.register_blueprint(presence_api)  # Register the generic presence event API
 # app.register_blueprint(announcement_api) ##temporary revert
 app.register_blueprint(calendar_api)
-app.register_blueprint(subscriptions_api)
 app.register_blueprint(resources_api)
 app.register_blueprint(media_api)
 
@@ -341,49 +338,6 @@ def format_optional_time(raw_time):
     except ValueError:
         return cleaned
 
-@app.route('/subscriptions', methods=['GET'])
-@login_required
-def manage_subscriptions():
-    if not current_user.is_admin():
-        return abort(403)
-
-    subscribers = Subscription.query.order_by(
-        Subscription.created_at.desc()
-    ).all()
-    total = len(subscribers)
-    active = Subscription.query.filter_by(confirmed=True, active=True).count()
-    pending = Subscription.query.filter_by(
-        confirmed=False, unsubscribed_at=None
-    ).count()
-    unsubscribed = Subscription.query.filter(
-        Subscription.unsubscribed_at.isnot(None),
-        Subscription.active.is_(False)
-    ).count()
-    announcements_sent = EventNotification.query.filter_by(
-        notification_type="announcement"
-    ).count()
-    reminders_sent = EventNotification.query.filter_by(
-        notification_type="reminder"
-    ).count()
-    pending_announcements = EventAnnouncement.query.filter_by(
-        processed=False
-    ).count()
-
-    response = current_app.make_response(render_template(
-        "subscriptions.html",
-        subscribers=subscribers,
-        total=total,
-        active=active,
-        pending=pending,
-        unsubscribed=unsubscribed,
-        announcements_sent=announcements_sent,
-        reminders_sent=reminders_sent,
-        pending_announcements=pending_announcements
-    ))
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
-
 @app.route('/events', methods=['GET', 'POST'])
 @login_required
 def manage_events():
@@ -441,10 +395,6 @@ def manage_events():
                         description=description
                     )
                     db.session.add(new_event)
-                    db.session.flush()
-
-                    announcement = EventAnnouncement(event_id=new_event.id)
-                    db.session.add(announcement)
 
                 db.session.commit()
                 return redirect(url_for('manage_events'))
