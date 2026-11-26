@@ -1,0 +1,504 @@
+{% extends "layouts/base.html" %}
+{% set basename = "Media Library" %}
+
+{% block body %}
+<div class="container my-5" id="media-admin-app" style="position: relative; z-index: 2;">
+  <div class="p-4 p-md-5 rounded-4 shadow-lg bg-white text-dark">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+      <div>
+        <h1 class="h2 mb-1 fw-bold">Media Library</h1>
+        <p class="text-muted mb-0">Upload, organize, and edit images for event thumbnails and site content.</p>
+      </div>
+      <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#uploadCollapse" aria-expanded="true" aria-controls="uploadCollapse">
+        + Upload New Image
+      </button>
+    </div>
+
+    <!-- Upload Panel -->
+    <div class="collapse show mb-4" id="uploadCollapse">
+      <div class="card shadow-sm bg-white text-dark">
+        <div class="card-header bg-dark text-white fw-semibold">
+          Upload Image
+        </div>
+        <div class="card-body">
+          <form id="media-upload-form" class="row g-3" enctype="multipart/form-data">
+            <div class="col-md-5">
+              <label for="upload-file" class="form-label fw-semibold">Image File (PNG, JPG, WEBP, GIF)</label>
+              <input type="file" class="form-control" id="upload-file" name="file" accept="image/png,image/jpeg,image/webp,image/gif" required>
+              <div id="upload-preview-wrap" class="mt-3 d-none">
+                <img id="upload-preview-img" src="" alt="Selected preview" class="img-thumbnail" style="max-height: 180px; object-fit: contain;">
+                <div id="upload-preview-meta" class="small text-muted mt-1"></div>
+              </div>
+            </div>
+
+            <div class="col-md-7">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="upload-caption" class="form-label fw-semibold">Caption / Title</label>
+                  <input type="text" class="form-control" id="upload-caption" name="caption" placeholder="e.g., Spring Community Picnic">
+                </div>
+                <div class="col-md-6">
+                  <label for="upload-alt" class="form-label fw-semibold">Alt Text (Accessibility)</label>
+                  <input type="text" class="form-control" id="upload-alt" name="alt_text" placeholder="Describe what is shown in the photo">
+                </div>
+                <div class="col-12">
+                  <label for="upload-description" class="form-label fw-semibold">Description / Notes</label>
+                  <textarea class="form-control" id="upload-description" name="description" rows="2" placeholder="Optional details, credits, or event context..."></textarea>
+                </div>
+                <div class="col-12 d-flex align-items-center gap-3">
+                  <button type="submit" id="upload-submit-btn" class="btn btn-success px-4">Upload Photo</button>
+                  <span id="upload-status" class="small fw-semibold" role="status" aria-live="polite"></span>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search, Filter & Sort Controls -->
+    <div class="card shadow-sm bg-white text-dark mb-4">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label for="media-search" class="form-label fw-semibold mb-1">Search</label>
+            <input type="search" id="media-search" class="form-control" placeholder="Search filename, caption, alt text, uploader...">
+          </div>
+
+          <div class="col-sm-6 col-md-3">
+            <label for="media-type-filter" class="form-label fw-semibold mb-1">File Type</label>
+            <select id="media-type-filter" class="form-select">
+              <option value="all" selected>All Image Types</option>
+              <option value="image/jpeg">JPEG (.jpg / .jpeg)</option>
+              <option value="image/png">PNG (.png)</option>
+              <option value="image/webp">WEBP (.webp)</option>
+              <option value="image/gif">GIF (.gif)</option>
+            </select>
+          </div>
+
+          <div class="col-sm-6 col-md-3">
+            <label for="media-sort" class="form-label fw-semibold mb-1">Sort By</label>
+            <select id="media-sort" class="form-select">
+              <option value="date-desc" selected>Date Uploaded (Newest First)</option>
+              <option value="date-asc">Date Uploaded (Oldest First)</option>
+              <option value="name-asc">Filename / Caption (A → Z)</option>
+              <option value="name-desc">Filename / Caption (Z → A)</option>
+              <option value="size-desc">File Size (Largest First)</option>
+              <option value="size-asc">File Size (Smallest First)</option>
+              <option value="dims-desc">Dimensions (Highest Resolution)</option>
+              <option value="uploader-asc">Uploader (A → Z)</option>
+            </select>
+          </div>
+
+          <div class="col-md-2 d-flex justify-content-md-end">
+            <button type="button" id="media-reset-filters" class="btn btn-outline-secondary w-100">Reset</button>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top small text-muted">
+          <span id="media-count-status" role="status" aria-live="polite">Loading media library...</span>
+          <span id="media-total-storage"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo Grid -->
+    <div id="media-grid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- Edit Metadata Modal -->
+<div class="modal fade text-dark" id="editMediaModal" tabindex="-1" aria-labelledby="editMediaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-white text-dark">
+      <form id="edit-media-form">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title" id="editMediaModalLabel">Edit Image Details</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="edit-media-id">
+          <div class="row g-3">
+            <div class="col-md-5 text-center">
+              <img id="edit-preview-img" src="" alt="" class="img-fluid rounded border mb-2" style="max-height: 240px; object-fit: contain;">
+              <div id="edit-tech-specs" class="small text-muted text-start bg-light p-2 rounded border"></div>
+            </div>
+            <div class="col-md-7">
+              <div class="mb-3">
+                <label for="edit-caption" class="form-label fw-semibold">Caption / Title</label>
+                <input type="text" class="form-control" id="edit-caption">
+              </div>
+              <div class="mb-3">
+                <label for="edit-alt" class="form-label fw-semibold">Alt Text</label>
+                <input type="text" class="form-control" id="edit-alt">
+              </div>
+              <div class="mb-3">
+                <label for="edit-description" class="form-label fw-semibold">Description</label>
+                <textarea class="form-control" id="edit-description" rows="3"></textarea>
+              </div>
+              <div class="mb-2">
+                <label for="edit-url" class="form-label fw-semibold">Image URL</label>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control" id="edit-url" readonly>
+                  <button type="button" class="btn btn-outline-secondary" id="edit-copy-url-btn">Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" id="edit-delete-btn" class="btn btn-outline-danger">Delete Image</button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" id="edit-save-btn" class="btn btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  'use strict';
+
+  const API_BASE = '/api/media';
+
+  let allMedia = [];
+
+  const gridEl = document.getElementById('media-grid');
+  const countStatusEl = document.getElementById('media-count-status');
+  const totalStorageEl = document.getElementById('media-total-storage');
+
+  const searchInput = document.getElementById('media-search');
+  const typeFilterSelect = document.getElementById('media-type-filter');
+  const sortSelect = document.getElementById('media-sort');
+  const resetFiltersBtn = document.getElementById('media-reset-filters');
+
+  const uploadForm = document.getElementById('media-upload-form');
+  const uploadFileInput = document.getElementById('upload-file');
+  const uploadPreviewWrap = document.getElementById('upload-preview-wrap');
+  const uploadPreviewImg = document.getElementById('upload-preview-img');
+  const uploadPreviewMeta = document.getElementById('upload-preview-meta');
+  const uploadStatusEl = document.getElementById('upload-status');
+  const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+
+  const editModalEl = document.getElementById('editMediaModal');
+  const editModal = new bootstrap.Modal(editModalEl);
+  const editForm = document.getElementById('edit-media-form');
+
+  function formatBytes(bytes) {
+    if (!bytes && bytes !== 0) return 'Unknown size';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return 'Unknown date';
+    const d = new Date(isoStr);
+    if (Number.isNaN(d.getTime())) return isoStr;
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  function getDisplayName(item) {
+    return (item.caption && item.caption.trim()) || item.filename || 'Untitled';
+  }
+
+  function getUploaderName(item) {
+    return (item.uploader && item.uploader.name) ? item.uploader.name : 'Unknown';
+  }
+
+  function getPixelArea(item) {
+    if (!item.dimensions || !item.dimensions.width || !item.dimensions.height) return 0;
+    return item.dimensions.width * item.dimensions.height;
+  }
+
+  // Live preview when choosing a file to upload
+  uploadFileInput.addEventListener('change', () => {
+    const file = uploadFileInput.files[0];
+    if (!file) {
+      uploadPreviewWrap.classList.add('d-none');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    uploadPreviewImg.src = objectUrl;
+    uploadPreviewImg.onload = () => {
+      uploadPreviewMeta.textContent = `${file.name} • ${formatBytes(file.size)} • ${uploadPreviewImg.naturalWidth}×${uploadPreviewImg.naturalHeight}px`;
+      URL.revokeObjectURL(objectUrl);
+    };
+    uploadPreviewWrap.classList.remove('d-none');
+  });
+
+  // Upload submit handler
+  uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = uploadFileInput.files[0];
+    if (!file) return;
+
+    uploadSubmitBtn.disabled = true;
+    uploadStatusEl.className = 'small fw-semibold text-primary';
+    uploadStatusEl.textContent = 'Uploading...';
+
+    try {
+      const formData = new FormData(uploadForm);
+      const res = await fetch(API_BASE, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      allMedia.unshift(data);
+      uploadForm.reset();
+      uploadPreviewWrap.classList.add('d-none');
+      uploadStatusEl.className = 'small fw-semibold text-success';
+      uploadStatusEl.textContent = `Uploaded "${data.filename}"!`;
+      renderGrid();
+    } catch (err) {
+      uploadStatusEl.className = 'small fw-semibold text-danger';
+      uploadStatusEl.textContent = `Error: ${err.message}`;
+    } finally {
+      uploadSubmitBtn.disabled = false;
+    }
+  });
+
+  function copyToClipboard(text, btnEl) {
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btnEl.textContent;
+      btnEl.textContent = 'Copied!';
+      setTimeout(() => { btnEl.textContent = original; }, 1500);
+    });
+  }
+
+  function openEditModal(item) {
+    document.getElementById('edit-media-id').value = item.id;
+    document.getElementById('edit-caption').value = item.caption || '';
+    document.getElementById('edit-alt').value = item.alt_text || '';
+    document.getElementById('edit-description').value = item.description || '';
+    document.getElementById('edit-url').value = item.url || '';
+
+    const previewImg = document.getElementById('edit-preview-img');
+    previewImg.src = item.url;
+    previewImg.alt = item.alt_text || item.filename;
+
+    const dimsLabel = (item.dimensions && item.dimensions.label) ? `${item.dimensions.label} px` : 'N/A';
+    document.getElementById('edit-tech-specs').innerHTML = `
+      <div><strong>Filename:</strong> ${escapeHtml(item.filename)}</div>
+      <div><strong>Type:</strong> ${escapeHtml(item.file_type)}</div>
+      <div><strong>Size:</strong> ${formatBytes(item.file_size)}</div>
+      <div><strong>Dimensions:</strong> ${dimsLabel}</div>
+      <div><strong>Uploaded:</strong> ${formatDate(item.date_uploaded)}</div>
+      <div><strong>Uploader:</strong> ${escapeHtml(getUploaderName(item))}</div>
+    `;
+
+    editModal.show();
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  document.getElementById('edit-copy-url-btn').addEventListener('click', (e) => {
+    const urlInput = document.getElementById('edit-url');
+    copyToClipboard(urlInput.value, e.currentTarget);
+  });
+
+  // Save edited metadata
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = Number(document.getElementById('edit-media-id').value);
+    const saveBtn = document.getElementById('edit-save-btn');
+    saveBtn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          caption: document.getElementById('edit-caption').value,
+          alt_text: document.getElementById('edit-alt').value,
+          description: document.getElementById('edit-description').value
+        })
+      });
+      const updated = await res.json();
+      if (!res.ok) throw new Error(updated.error || `HTTP ${res.status}`);
+
+      const idx = allMedia.findIndex(m => m.id === id);
+      if (idx !== -1) allMedia[idx] = updated;
+      editModal.hide();
+      renderGrid();
+    } catch (err) {
+      alert(`Failed to save changes: ${err.message}`);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  // Delete from modal
+  document.getElementById('edit-delete-btn').addEventListener('click', async () => {
+    const id = Number(document.getElementById('edit-media-id').value);
+    const item = allMedia.find(m => m.id === id);
+    if (!item) return;
+    if (!confirm(`Delete "${item.filename}" permanently? Any event using this thumbnail will lose its image.`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      allMedia = allMedia.filter(m => m.id !== id);
+      editModal.hide();
+      renderGrid();
+    } catch (err) {
+      alert(`Failed to delete image: ${err.message}`);
+    }
+  });
+
+  function renderGrid() {
+    const query = searchInput.value.trim().toLowerCase();
+    const typeFilter = typeFilterSelect.value;
+    const sortMode = sortSelect.value;
+
+    let filtered = allMedia.filter(item => {
+      if (typeFilter !== 'all' && item.file_type !== typeFilter) return false;
+      if (!query) return true;
+
+      const haystack = [
+        item.filename,
+        item.caption,
+        item.alt_text,
+        item.description,
+        getUploaderName(item)
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(query);
+    });
+
+    filtered.sort((a, b) => {
+      switch (sortMode) {
+        case 'date-asc':
+          return new Date(a.date_uploaded || 0) - new Date(b.date_uploaded || 0);
+        case 'date-desc':
+          return new Date(b.date_uploaded || 0) - new Date(a.date_uploaded || 0);
+        case 'name-asc':
+          return getDisplayName(a).localeCompare(getDisplayName(b));
+        case 'name-desc':
+          return getDisplayName(b).localeCompare(getDisplayName(a));
+        case 'size-desc':
+          return (b.file_size || 0) - (a.file_size || 0);
+        case 'size-asc':
+          return (a.file_size || 0) - (b.file_size || 0);
+        case 'dims-desc':
+          return getPixelArea(b) - getPixelArea(a);
+        case 'uploader-asc':
+          return getUploaderName(a).localeCompare(getUploaderName(b));
+        default:
+          return 0;
+      }
+    });
+
+    const totalBytes = allMedia.reduce((sum, m) => sum + (m.file_size || 0), 0);
+    countStatusEl.textContent = `Showing ${filtered.length} of ${allMedia.length} image${allMedia.length === 1 ? '' : 's'}`;
+    totalStorageEl.textContent = allMedia.length ? `Total storage: ${formatBytes(totalBytes)}` : '';
+
+    gridEl.replaceChildren();
+
+    if (filtered.length === 0) {
+      const emptyCol = document.createElement('div');
+      emptyCol.className = 'col-12';
+      emptyCol.innerHTML = `
+        <div class="alert alert-secondary mb-0">
+          ${allMedia.length === 0 ? 'No images have been uploaded yet. Use the upload panel above to add your first image.' : 'No images match your current search or filter.'}
+        </div>
+      `;
+      gridEl.appendChild(emptyCol);
+      return;
+    }
+
+    filtered.forEach(item => {
+      const col = document.createElement('div');
+      col.className = 'col';
+
+      const dimsText = (item.dimensions && item.dimensions.label) ? item.dimensions.label : '—';
+      const titleText = getDisplayName(item);
+
+      col.innerHTML = `
+        <div class="card h-100 shadow-sm bg-white text-dark">
+          <div class="bg-dark d-flex align-items-center justify-content-center" style="height: 200px; overflow: hidden; cursor: pointer;" data-action="edit">
+            <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.alt_text || item.filename)}" class="w-100 h-100" style="object-fit: cover;" loading="lazy">
+          </div>
+          <div class="card-body d-flex flex-column">
+            <h2 class="h6 card-title text-truncate mb-1" title="${escapeHtml(titleText)}">${escapeHtml(titleText)}</h2>
+            <p class="small text-muted text-truncate mb-2" title="${escapeHtml(item.filename)}">${escapeHtml(item.filename)}</p>
+            <p class="small card-text flex-grow-1 mb-3">${escapeHtml(item.description || item.alt_text || 'No description provided.')}</p>
+
+            <div class="d-flex flex-wrap gap-1 mb-3">
+              <span class="badge bg-secondary">${dimsText}</span>
+              <span class="badge bg-secondary">${formatBytes(item.file_size)}</span>
+              <span class="badge bg-light text-dark border">${escapeHtml((item.file_type || '').replace('image/', '').toUpperCase())}</span>
+            </div>
+
+            <div class="small text-muted mb-3">
+              <div>Uploaded ${formatDate(item.date_uploaded)}</div>
+              <div>By ${escapeHtml(getUploaderName(item))}</div>
+            </div>
+
+            <div class="d-flex gap-2 mt-auto">
+              <button type="button" class="btn btn-sm btn-primary flex-grow-1" data-action="edit">Edit</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-action="copy">Copy URL</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      col.querySelectorAll('[data-action="edit"]').forEach(el => {
+        el.addEventListener('click', () => openEditModal(item));
+      });
+
+      const copyBtn = col.querySelector('[data-action="copy"]');
+      copyBtn.addEventListener('click', () => copyToClipboard(item.url, copyBtn));
+
+      gridEl.appendChild(col);
+    });
+  }
+
+  searchInput.addEventListener('input', renderGrid);
+  typeFilterSelect.addEventListener('change', renderGrid);
+  sortSelect.addEventListener('change', renderGrid);
+  resetFiltersBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    typeFilterSelect.value = 'all';
+    sortSelect.value = 'date-desc';
+    renderGrid();
+  });
+
+  async function loadMedia() {
+    try {
+      const res = await fetch(API_BASE, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allMedia = await res.json();
+      renderGrid();
+    } catch (err) {
+      countStatusEl.textContent = `Failed to load media library (${err.message}).`;
+    }
+  }
+
+  loadMedia();
+});
+</script>
+{% endblock %}

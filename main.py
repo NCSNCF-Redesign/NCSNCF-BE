@@ -39,6 +39,7 @@ from api.presence_api import presence_api
 from api.calendar import calendar_api
 from api.resources import resources_api
 from api.survey import survey_api # Import your survey blueprint
+from api.media import media_api
 
 # database Initialization functions
 from model.user import User, initUsers
@@ -57,6 +58,7 @@ from model.microblog import MicroBlog, Topic, initMicroblogs
 from model.leaderboard import ScoreCounterEvent, ElementaryLeaderboardEvent
 from hacks.jokes import initJokes 
 from model.calendar import Event
+from model.media import Media
 # from model.announcement import Announcement ##temporary revert
 
 # server only Views
@@ -101,6 +103,7 @@ app.register_blueprint(presence_api)  # Register the generic presence event API
 # app.register_blueprint(announcement_api) ##temporary revert
 app.register_blueprint(calendar_api)
 app.register_blueprint(resources_api)
+app.register_blueprint(media_api)
 
 # Database Models for Storing Editable Page Content & Milestones (Defined before db.create_all())
 class PageContent(db.Model):
@@ -462,6 +465,13 @@ def delete_event(event_id):
     db.session.delete(event)
     db.session.commit()
     return redirect(url_for('manage_events'))
+
+@app.route('/media', methods=['GET'])
+@login_required
+def manage_media():
+    if not current_user.is_admin():
+        return abort(403)
+    return render_template("media.html")
 
 # Milestone API Endpoints
 @app.route('/api/milestones', methods=['GET'])
