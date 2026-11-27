@@ -6,6 +6,7 @@ from flask.cli import AppGroup
 from flask_login import current_user, login_required
 from flask import current_app
 from dotenv import load_dotenv
+from sqlalchemy import inspect, text
 
 # import "objects" from "this" project
 from __init__ import app, db, login_manager  # Key Flask objects 
@@ -144,6 +145,15 @@ class Milestone(db.Model):
 # Jokes file initialization & Table creation
 with app.app_context():
     db.create_all()
+    # Ensure existing SQLite events tables have thumbnail columns
+    inspector = inspect(db.engine)
+    if 'events' in inspector.get_table_names():
+        existing_cols = {col['name'] for col in inspector.get_columns('events')}
+        if 'media_id' not in existing_cols:
+            db.session.execute(text('ALTER TABLE events ADD COLUMN media_id INTEGER REFERENCES media(id)'))
+        if 'image_url' not in existing_cols:
+            db.session.execute(text('ALTER TABLE events ADD COLUMN image_url VARCHAR(512)'))
+        db.session.commit()
     initJokes()
 
 # Tell Flask-Login the view function name of your login route
@@ -360,6 +370,9 @@ def manage_events():
         description = request.form.get('description', '').strip()
         repeat = request.form.get('repeat', 'none').strip()
         repeat_until = request.form.get('repeat_until', '').strip()
+        raw_media_id = request.form.get('media_id', '').strip()
+        media_id = int(raw_media_id) if raw_media_id.isdigit() else None
+        image_url = None if media_id else (request.form.get('image_url', '').strip() or None)
 
         if not event_date or event_date < min_date:
             error = "Event date must be in the future."
@@ -392,7 +405,9 @@ def manage_events():
                         category=category,
                         format=event_format,
                         cost_rsvp=cost_rsvp,
-                        description=description
+                        description=description,
+                        media_id=media_id,
+                        image_url=image_url
                     )
                     db.session.add(new_event)
 
@@ -451,6 +466,10 @@ def edit_event(event_id):
     event.format = request.form.get('format', event.format)
     event.cost_rsvp = request.form.get('cost_rsvp', '').strip()
     event.description = request.form.get('description', '')
+
+    raw_media_id = request.form.get('media_id', '').strip()
+    event.media_id = int(raw_media_id) if raw_media_id.isdigit() else None
+    event.image_url = None if event.media_id else (request.form.get('image_url', '').strip() or None)
 
     db.session.commit()
     return redirect(url_for('manage_events'))

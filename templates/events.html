@@ -80,6 +80,29 @@
           <div class="form-text" id="repeatPreview">One-time event</div>
         </div>
 
+        <!-- Optional Thumbnail Picker (Create) -->
+        <div class="col-md-12">
+          <label class="form-label fw-semibold">Event Thumbnail <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="hidden" name="media_id" id="createMediaId">
+          <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded border bg-light">
+            <img id="createThumbPreview" src="" alt="Selected thumbnail" class="rounded border d-none" style="width: 96px; height: 64px; object-fit: cover;">
+            <div class="flex-grow-1">
+              <div id="createThumbLabel" class="small fw-semibold text-muted mb-2">No thumbnail selected</div>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-open-media-picker="create">
+                  Choose from Media Library
+                </button>
+                <button type="button" id="createClearThumbBtn" class="btn btn-outline-secondary btn-sm d-none">
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div class="col-12 col-md-5 mt-2 mt-md-0">
+              <input type="url" name="image_url" id="createImageUrl" placeholder="Or paste an external image URL..." class="form-control form-control-sm">
+            </div>
+          </div>
+        </div>
+
         <div class="col-md-12">
           <label class="form-label fw-semibold">Description</label>
           <textarea name="description" rows="2" placeholder="Event details, accessibility notes, or schedule..." class="form-control"></textarea>
@@ -95,6 +118,7 @@
       <table class="table table-striped table-hover align-middle mb-0">
         <thead class="table-light">
           <tr>
+            <th>Thumbnail</th>
             <th>Title</th>
             <th>Date</th>
             <th>Time</th>
@@ -108,7 +132,15 @@
         </thead>
         <tbody>
           {% for event in events %}
+          {% set thumb_url = event.get_thumbnail_url() if event.get_thumbnail_url is defined else (event.media.url if event.media else event.image_url) %}
           <tr>
+            <td>
+              {% if thumb_url %}
+                <img src="{{ thumb_url }}" alt="{{ event.title }}" class="rounded border" style="width: 64px; height: 44px; object-fit: cover;">
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
             <td>{{ event.title }}</td>
             <td>
               {{ event.date }}{% if event.end_date and event.end_date != event.date %} – {{ event.end_date }}{% endif %}
@@ -154,7 +186,11 @@
                       data-location="{{ event.location }}"
                       data-category="{{ event.category }}"
                       data-cost-rsvp="{{ event.cost_rsvp or '' }}"
-                      data-description="{{ event.description or '' }}">
+                      data-description="{{ event.description or '' }}"
+                      data-media-id="{{ event.media_id or '' }}"
+                      data-media-label="{{ (event.media.caption or event.media.filename) if event.media else '' }}"
+                      data-thumb-url="{{ thumb_url or '' }}"
+                      data-image-url="{{ event.image_url or '' }}">
                 Edit
               </button>
               <form method="POST" action="{{ url_for('delete_event', event_id=event.id) }}" style="display:inline;">
@@ -187,7 +223,7 @@
 
 <!-- Edit Event Modal -->
 <div class="modal fade text-dark" id="editEventModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content bg-white text-dark">
       <form id="editEventForm" method="POST">
         <div class="modal-header">
@@ -241,6 +277,30 @@
               <label class="form-label">Cost / RSVP</label>
               <input type="text" name="cost_rsvp" id="editEventCostRsvp" placeholder="e.g., Free or RSVP link" class="form-control">
             </div>
+
+            <!-- Optional Thumbnail Picker (Edit) -->
+            <div class="col-md-12">
+              <label class="form-label">Event Thumbnail <span class="text-muted fw-normal">(optional)</span></label>
+              <input type="hidden" name="media_id" id="editMediaId">
+              <div class="d-flex flex-wrap align-items-center gap-3 p-3 rounded border bg-light">
+                <img id="editThumbPreview" src="" alt="Selected thumbnail" class="rounded border d-none" style="width: 96px; height: 64px; object-fit: cover;">
+                <div class="flex-grow-1">
+                  <div id="editThumbLabel" class="small fw-semibold text-muted mb-2">No thumbnail selected</div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-open-media-picker="edit">
+                      Choose from Media Library
+                    </button>
+                    <button type="button" id="editClearThumbBtn" class="btn btn-outline-secondary btn-sm d-none">
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div class="col-12 mt-2">
+                  <input type="url" name="image_url" id="editImageUrl" placeholder="Or paste an external image URL..." class="form-control form-control-sm">
+                </div>
+              </div>
+            </div>
+
             <div class="col-md-12">
               <label class="form-label">Description</label>
               <textarea name="description" id="editEventDescription" rows="3" class="form-control"></textarea>
@@ -252,6 +312,30 @@
           <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Media Library Visual Picker Modal -->
+<div class="modal fade text-dark" id="mediaPickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content bg-white text-dark">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Select Thumbnail from Media Library</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <input type="search" id="pickerSearchInput" class="form-control form-control-sm" style="max-width: 280px;" placeholder="Search photos by caption or filename...">
+          <a href="{{ url_for('manage_media') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+            + Upload More in Media Library
+          </a>
+        </div>
+        <div id="pickerGrid" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -278,6 +362,131 @@
     return `${String(hours).padStart(2, "0")}:${minutes}`;
   }
 
+  // Thumbnail state helper for Create & Edit forms
+  function setThumbnailSelection(target, { mediaId = '', url = '', label = '', clearExternalUrl = true } = {}) {
+    const idInput = document.getElementById(`${target}MediaId`);
+    const urlInput = document.getElementById(`${target}ImageUrl`);
+    const previewImg = document.getElementById(`${target}ThumbPreview`);
+    const labelEl = document.getElementById(`${target}ThumbLabel`);
+    const clearBtn = document.getElementById(`${target}ClearThumbBtn`);
+
+    idInput.value = mediaId || '';
+    if (clearExternalUrl) {
+      urlInput.value = mediaId ? '' : (url || '');
+    }
+
+    if (url) {
+      previewImg.src = url;
+      previewImg.classList.remove('d-none');
+      labelEl.textContent = label || (mediaId ? `Media #${mediaId}` : 'External image URL');
+      clearBtn.classList.remove('d-none');
+    } else {
+      previewImg.src = '';
+      previewImg.classList.add('d-none');
+      labelEl.textContent = 'No thumbnail selected';
+      clearBtn.classList.add('d-none');
+    }
+  }
+
+  ['create', 'edit'].forEach(target => {
+    document.getElementById(`${target}ClearThumbBtn`).addEventListener('click', () => {
+      setThumbnailSelection(target, { mediaId: '', url: '', label: '', clearExternalUrl: true });
+    });
+
+    document.getElementById(`${target}ImageUrl`).addEventListener('input', (e) => {
+      const typedUrl = e.target.value.trim();
+      setThumbnailSelection(target, {
+        mediaId: '',
+        url: typedUrl,
+        label: typedUrl ? 'External image URL' : '',
+        clearExternalUrl: false
+      });
+    });
+  });
+
+  // Visual Media Picker Modal
+  let pickerTarget = 'create';
+  let cachedMedia = null;
+  const mediaPickerModalEl = document.getElementById('mediaPickerModal');
+  const mediaPickerModal = new bootstrap.Modal(mediaPickerModalEl);
+  const pickerGrid = document.getElementById('pickerGrid');
+  const pickerSearchInput = document.getElementById('pickerSearchInput');
+
+  function renderPickerGrid() {
+    const query = pickerSearchInput.value.trim().toLowerCase();
+    const list = (cachedMedia || []).filter(item => {
+      if (!query) return true;
+      return `${item.caption || ''} ${item.filename || ''} ${item.alt_text || ''}`.toLowerCase().includes(query);
+    });
+
+    pickerGrid.replaceChildren();
+
+    if (list.length === 0) {
+      pickerGrid.innerHTML = `<div class="col-12 text-muted small">No matching images found in Media Library.</div>`;
+      return;
+    }
+
+    list.forEach(item => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      const title = (item.caption && item.caption.trim()) || item.filename || `Media #${item.id}`;
+
+      const card = document.createElement('div');
+      card.className = 'card h-100 border shadow-sm';
+      card.style.cursor = 'pointer';
+
+      const img = document.createElement('img');
+      img.src = item.url;
+      img.alt = item.alt_text || title;
+      img.className = 'card-img-top border-bottom';
+      img.style.height = '120px';
+      img.style.objectFit = 'cover';
+
+      const body = document.createElement('div');
+      body.className = 'card-body p-2';
+      const captionEl = document.createElement('div');
+      captionEl.className = 'small fw-semibold text-truncate';
+      captionEl.title = title;
+      captionEl.textContent = title;
+      body.appendChild(captionEl);
+
+      card.append(img, body);
+      card.addEventListener('click', () => {
+        setThumbnailSelection(pickerTarget, {
+          mediaId: String(item.id),
+          url: item.url,
+          label: title,
+          clearExternalUrl: true
+        });
+        mediaPickerModal.hide();
+      });
+
+      col.appendChild(card);
+      pickerGrid.appendChild(col);
+    });
+  }
+
+  document.querySelectorAll('[data-open-media-picker]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      pickerTarget = btn.getAttribute('data-open-media-picker');
+      pickerSearchInput.value = '';
+      mediaPickerModal.show();
+
+      if (!cachedMedia) {
+        pickerGrid.innerHTML = `<div class="col-12 text-muted small">Loading Media Library...</div>`;
+        try {
+          const res = await fetch('/api/media', { credentials: 'include' });
+          cachedMedia = res.ok ? await res.json() : [];
+        } catch {
+          cachedMedia = [];
+        }
+      }
+      renderPickerGrid();
+    });
+  });
+
+  pickerSearchInput.addEventListener('input', renderPickerGrid);
+
   const editEventModal = document.getElementById('editEventModal');
   const editStartDateInput = document.getElementById('editEventDate');
   const editEndDateInput = document.getElementById('editEventEndDate');
@@ -285,6 +494,8 @@
   if (editEventModal) {
     editEventModal.addEventListener('show.bs.modal', function (event) {
       const button = event.relatedTarget;
+      if (!button) return;
+
       const startDateVal = button.getAttribute('data-date') || '';
       const endDateVal = button.getAttribute('data-end-date') || '';
 
@@ -313,6 +524,19 @@
       categorySelect.value = currentCategory;
 
       document.getElementById('editEventDescription').value = button.getAttribute('data-description');
+
+      const existingMediaId = button.getAttribute('data-media-id') || '';
+      const existingThumbUrl = button.getAttribute('data-thumb-url') || '';
+      const existingExternalUrl = button.getAttribute('data-image-url') || '';
+      const existingMediaLabel = button.getAttribute('data-media-label') || '';
+
+      document.getElementById('editImageUrl').value = existingMediaId ? '' : existingExternalUrl;
+      setThumbnailSelection('edit', {
+        mediaId: existingMediaId,
+        url: existingThumbUrl,
+        label: existingMediaLabel || (existingThumbUrl ? 'External image URL' : ''),
+        clearExternalUrl: false
+      });
     });
   }
 
