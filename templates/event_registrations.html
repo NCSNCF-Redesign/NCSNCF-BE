@@ -1,0 +1,430 @@
+{% extends "layouts/base.html" %}
+{% set project = "Event Registrations" %}
+
+{% block body %}
+<div class="container my-5">
+  <div class="p-4 p-md-5 rounded-4 shadow-lg bg-white text-dark">
+
+    <a href="{{ url_for('manage_events') }}"
+       class="btn btn-outline-secondary mb-4">
+      &larr; Back to Events
+    </a>
+
+    <h2 class="fw-bold">Event Registrations</h2>
+    <h4>{{ event.title }}</h4>
+
+    <p class="text-muted">
+      {{ event.date }} | {{ event.location }}
+    </p>
+
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="alert alert-{{ 'success' if category == 'success' else 'info' }}" role="status">{{ message }}</div>
+    {% endfor %}
+    {% if error %}
+      <div class="alert alert-danger" role="alert">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    {% if settings and settings.enabled %}
+      <span class="badge bg-success">Registration Enabled</span>
+    {% else %}
+      <span class="badge bg-secondary">Registration Disabled</span>
+    {% endif %}
+
+    <!-- Registration statistics -->
+    <div class="row g-3 my-4">
+
+      <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100 shadow-sm">
+          <div class="text-muted">Confirmed Attendees</div>
+          <h2 class="text-success mb-0">{{ confirmed }}</h2>
+        </div>
+      </div>
+
+      <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100 shadow-sm">
+          <div class="text-muted">Waitlisted Attendees</div>
+          <h2 class="text-warning mb-0">{{ waitlisted }}</h2>
+        </div>
+      </div>
+
+      <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100 shadow-sm">
+          <div class="text-muted">Cancelled Registrations</div>
+          <h2 class="mb-0">{{ cancelled }}</h2>
+        </div>
+      </div>
+
+      <div class="col-6 col-lg-3">
+        <div class="card p-3 h-100 shadow-sm">
+          <div class="text-muted">Event Capacity</div>
+          <h2 class="mb-0">
+            {% if settings and settings.capacity is not none %}
+              {{ settings.capacity }}
+            {% else %}
+              Unlimited
+            {% endif %}
+          </h2>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Capacity progress -->
+    {% if settings and settings.capacity %}
+      {% set percentage = (confirmed / settings.capacity * 100)|round|int %}
+      <div class="mb-4">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="fw-semibold">Event Capacity</span>
+          <span>{{ confirmed }} / {{ settings.capacity }}</span>
+        </div>
+
+        <div class="progress" style="height: 14px;">
+          <div class="progress-bar bg-success"
+               role="progressbar"
+               data-progress="{{ [percentage, 100]|min }}"
+               aria-label="Event capacity used"
+               aria-valuenow="{{ [percentage, 100]|min }}"
+               aria-valuemin="0"
+               aria-valuemax="100">
+          </div>
+        </div>
+
+        <small class="text-muted">
+          {{ [settings.capacity - confirmed, 0]|max }}
+          spots remaining
+        </small>
+      </div>
+    {% endif %}
+
+    <hr class="my-4">
+
+    <!-- Registration settings -->
+    <h3 class="fw-bold mb-3">Registration Settings</h3>
+
+    <form method="POST"
+          action="{{ url_for('event_registration_api.manage_registrations', event_id=event.id) }}"
+          class="border rounded-3 p-4 mb-5">
+
+      <input type="hidden"
+             name="csrf_token"
+             value="{{ csrf_token }}">
+
+      <div class="form-check form-switch mb-4">
+
+        <input type="checkbox"
+               class="form-check-input"
+               name="enabled"
+               id="registrationEnabled"
+               {% if settings and settings.enabled %}
+                 checked
+               {% endif %}>
+
+        <label class="form-check-label fw-semibold"
+               for="registrationEnabled">
+          Enable online RSVP registration
+        </label>
+
+        <div class="form-text">
+          Allow visitors to register for this event
+          directly from the website calendar.
+        </div>
+
+      </div>
+
+      <div class="row g-3">
+
+        <div class="col-md-6">
+
+          <label class="form-label fw-semibold"
+                 for="capacity">
+            Maximum Attendee Capacity
+          </label>
+
+          <input type="number"
+                 class="form-control"
+                 id="capacity"
+                 name="capacity"
+                 min="1"
+                 max="100000"
+                 value="{{ settings.capacity if settings and settings.capacity is not none else '' }}"
+                 placeholder="Unlimited">
+
+          <div class="form-text">
+            Leave blank for unlimited capacity.
+          </div>
+
+        </div>
+
+        <div class="col-md-6">
+
+          <label class="form-label fw-semibold"
+                 for="deadline">
+            Registration Deadline
+          </label>
+
+          <input type="datetime-local"
+                 class="form-control"
+                 id="deadline"
+                 name="registration_deadline"
+                 value="{{ deadline_value }}">
+
+          <div class="form-text">
+            Pacific Time. Leave blank for no custom deadline.
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="form-check form-switch my-4">
+
+        <input type="checkbox"
+               class="form-check-input"
+               name="waitlist_enabled"
+               id="waitlistEnabled"
+               {% if not settings or settings.waitlist_enabled %}
+                 checked
+               {% endif %}>
+
+        <label class="form-check-label fw-semibold"
+               for="waitlistEnabled">
+          Enable automatic waitlisting
+        </label>
+
+        <div class="form-text">
+          Allow additional registrations when the event
+          reaches capacity.
+        </div>
+
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        Save Registration Settings
+      </button>
+
+    </form>
+
+    <!-- Attendee management -->
+    <h3 class="fw-bold mb-3">Registered Attendees</h3>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a class="btn btn-outline-primary" href="{{ url_for('event_registration_api.export_registrations', event_id=event.id, status='confirmed') }}">Export Confirmed CSV</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('event_registration_api.export_registrations', event_id=event.id, status='all') }}">Export All CSV</a>
+    </div>
+    <p class="small text-muted">CSV exports contain private contact information. Accommodation notes are excluded.</p>
+
+    <div class="alert alert-light border small">
+      Attendee information is private and should only
+      be accessed by authorized foundation staff.
+    </div>
+
+    <div class="row g-3 mb-3">
+
+      <div class="col-md-8">
+        <label for="attendeeSearch" class="form-label">
+          Search Attendees
+        </label>
+
+        <input type="search"
+               id="attendeeSearch"
+               class="form-control"
+               placeholder="Search by name or email...">
+      </div>
+
+      <div class="col-md-4">
+        <label for="statusFilter" class="form-label">
+          Registration Status
+        </label>
+
+        <select id="statusFilter" class="form-select">
+          <option value="all">All Registrations</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="waitlisted">Waitlisted</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+    </div>
+
+    <p class="text-muted small" id="registrationCount"
+       aria-live="polite">
+      {{ registrations|length }} registrations
+    </p>
+
+    <div class="table-responsive">
+
+      <table class="table table-striped table-hover align-middle">
+
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Adults</th>
+            <th scope="col">Children</th>
+            <th scope="col">Total</th>
+            <th scope="col">Status</th>
+            <th scope="col">Accommodation Notes</th>
+            <th scope="col">Registered (UTC)</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody id="registrationTable">
+
+          {% for registration in registrations %}
+
+            <tr class="registration-row"
+                data-status="{{ registration.status }}"
+                data-name="{{ registration.full_name }}"
+                data-email="{{ registration.email }}">
+
+              <td>{{ registration.full_name }}</td>
+              <td>{{ registration.email }}</td>
+              <td>{{ registration.adults }}</td>
+              <td>{{ registration.children }}</td>
+              <td class="fw-semibold">
+                {{ registration.total_attendees }}
+              </td>
+
+              <td>
+                {% if registration.status == "confirmed" %}
+
+                  <span class="badge bg-success">
+                    Confirmed
+                  </span>
+
+                {% elif registration.status == "waitlisted" %}
+
+                  <span class="badge bg-warning text-dark">
+                    Waitlisted
+                  </span>
+
+                {% else %}
+
+                  <span class="badge bg-secondary">
+                    Cancelled
+                  </span>
+
+                {% endif %}
+              </td>
+
+              <td style="min-width: 180px; overflow-wrap: anywhere;">
+                {{ registration.accommodation_notes or "—" }}
+              </td>
+
+              <td>
+                {{ registration.created_at.strftime("%Y-%m-%d %H:%M") }}
+              </td>
+              <td>
+                {% if registration.status != 'cancelled' %}
+                <form method="POST" class="cancel-registration-form" action="{{ url_for('event_registration_api.admin_cancel_registration', event_id=event.id, registration_id=registration.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Cancel RSVP</button>
+                </form>
+                {% else %}—{% endif %}
+              </td>
+
+            </tr>
+
+          {% else %}
+
+            <tr>
+              <td colspan="9"
+                  class="text-center text-muted py-4">
+                No registrations yet.
+              </td>
+            </tr>
+
+          {% endfor %}
+
+          <tr id="noMatchingRegistrations" hidden>
+            <td colspan="9"
+                class="text-center text-muted py-4">
+              No matching registrations found.
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  (() => {
+    document.querySelectorAll('.cancel-registration-form').forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!window.confirm('Cancel this registration? Eligible waitlisted families may be promoted.')) event.preventDefault();
+      });
+    });
+    document.querySelectorAll("[data-progress]").forEach(bar => {
+      bar.style.width = `${bar.dataset.progress}%`;
+    });
+
+    const searchInput =
+      document.getElementById("attendeeSearch");
+
+    const statusFilter =
+      document.getElementById("statusFilter");
+
+    const countLabel =
+      document.getElementById("registrationCount");
+
+    const emptyRow =
+      document.getElementById("noMatchingRegistrations");
+
+    const rows = Array.from(
+      document.querySelectorAll(".registration-row")
+    );
+
+    function filterRegistrations() {
+      const query = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const name = (row.dataset.name || "").toLowerCase();
+        const email = (row.dataset.email || "").toLowerCase();
+
+        const matchesSearch =
+          name.includes(query) || email.includes(query);
+
+        const matchesStatus =
+          status === "all" || row.dataset.status === status;
+
+        const visible = matchesSearch && matchesStatus;
+
+        row.hidden = !visible;
+
+        if (visible) {
+          visibleCount++;
+        }
+      });
+
+      countLabel.textContent =
+        `${visibleCount} of ${rows.length} registrations`;
+
+      emptyRow.hidden =
+        visibleCount !== 0 || rows.length === 0;
+    }
+
+    searchInput.addEventListener(
+      "input",
+      filterRegistrations
+    );
+
+    statusFilter.addEventListener(
+      "change",
+      filterRegistrations
+    );
+
+    filterRegistrations();
+  })();
+</script>
+
+{% endblock %}

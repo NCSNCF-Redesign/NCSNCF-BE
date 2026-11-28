@@ -38,6 +38,7 @@ from api.rfid_api import rfid_api
 from api.presence_api import presence_api
 #from api.announcement import announcement_api ##temporary revert
 from api.calendar import calendar_api
+from api.event_registration import event_registration_api
 from api.resources import resources_api
 from api.survey import survey_api # Import your survey blueprint
 from api.media import media_api
@@ -59,6 +60,10 @@ from model.microblog import MicroBlog, Topic, initMicroblogs
 from model.leaderboard import ScoreCounterEvent, ElementaryLeaderboardEvent
 from hacks.jokes import initJokes 
 from model.calendar import Event
+from model.event_registration import (
+    EventRegistration,
+    EventRegistrationSettings
+)
 from model.media import Media
 # from model.announcement import Announcement ##temporary revert
 
@@ -103,6 +108,7 @@ app.register_blueprint(rfid_api)  # Register the RFID attendance API
 app.register_blueprint(presence_api)  # Register the generic presence event API
 # app.register_blueprint(announcement_api) ##temporary revert
 app.register_blueprint(calendar_api)
+app.register_blueprint(event_registration_api)
 app.register_blueprint(resources_api)
 app.register_blueprint(media_api)
 
